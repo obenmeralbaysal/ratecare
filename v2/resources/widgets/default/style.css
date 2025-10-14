@@ -1,0 +1,376 @@
+/* Hotel Widget Base Styles */
+.hotel-widget {
+    border: 1px solid #e1e5e9;
+    border-radius: 12px;
+    padding: 24px;
+    margin: 16px 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #ffffff;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    transition: box-shadow 0.3s ease;
+}
+
+.hotel-widget:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Widget Header */
+.widget-header {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #f1f3f4;
+    padding-bottom: 16px;
+}
+
+.widget-header h3 {
+    margin: 0 0 12px 0;
+    color: #1a1a1a;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.hotel-info h4 {
+    margin: 0 0 8px 0;
+    color: #2c3e50;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.hotel-location {
+    margin: 0 0 8px 0;
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.hotel-location i {
+    margin-right: 6px;
+    color: #007bff;
+}
+
+.hotel-rating {
+    display: flex;
+    gap: 2px;
+}
+
+.hotel-rating .fas.fa-star {
+    color: #ddd;
+    font-size: 14px;
+}
+
+.hotel-rating .fas.fa-star.active {
+    color: #ffc107;
+}
+
+/* Search Widget Styles */
+.widget-search .search-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    margin-bottom: 6px;
+    color: #374151;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select {
+    padding: 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.form-actions {
+    margin-top: 8px;
+}
+
+.search-button {
+    width: 100%;
+    padding: 14px 24px;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.search-button:hover {
+    background: linear-gradient(135deg, #0056b3, #004085);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+/* Rates Widget Styles */
+.rates-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.rate-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 16px;
+    padding: 20px;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+    align-items: center;
+}
+
+.rate-item:hover {
+    border-color: #007bff;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+}
+
+.rate-info .room-type strong {
+    color: #2c3e50;
+    font-size: 16px;
+}
+
+.room-details {
+    margin: 4px 0 0 0;
+    color: #6c757d;
+    font-size: 13px;
+}
+
+.rate-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.feature {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: #e3f2fd;
+    color: #1976d2;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.feature.breakfast {
+    background: #fff3e0;
+    color: #f57c00;
+}
+
+.feature.cancellation {
+    background: #e8f5e8;
+    color: #388e3c;
+}
+
+.rate-pricing {
+    text-align: right;
+}
+
+.rate-price {
+    color: #2c3e50;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.price-amount {
+    font-size: 24px;
+    font-weight: 700;
+    color: #007bff;
+}
+
+.rate-dates {
+    color: #6c757d;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.rate-source {
+    color: #6c757d;
+    font-size: 12px;
+    font-style: italic;
+}
+
+.booking-button {
+    padding: 12px 20px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.booking-button:hover {
+    background: #218838;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(40, 167, 69, 0.3);
+    color: white;
+    text-decoration: none;
+}
+
+/* Widget Footer */
+.widget-footer {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #f1f3f4;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.rates-info {
+    margin: 0;
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.refresh-rates {
+    padding: 8px 16px;
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.3s ease;
+}
+
+.refresh-rates:hover {
+    background: #5a6268;
+}
+
+.refresh-rates:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* No Rates State */
+.no-rates {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+}
+
+.no-rates-icon {
+    font-size: 48px;
+    color: #dee2e6;
+    margin-bottom: 16px;
+}
+
+.no-rates h4 {
+    margin: 0 0 8px 0;
+    color: #495057;
+    font-size: 18px;
+}
+
+.no-rates p {
+    margin: 0 0 20px 0;
+    font-size: 14px;
+}
+
+.search-other-dates {
+    padding: 10px 20px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.3s ease;
+}
+
+.search-other-dates:hover {
+    background: #0056b3;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .hotel-widget {
+        padding: 16px;
+        margin: 8px 0;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .rate-item {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        text-align: center;
+    }
+    
+    .rate-pricing {
+        text-align: center;
+    }
+    
+    .widget-footer {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .hotel-widget {
+        padding: 12px;
+        border-radius: 8px;
+    }
+    
+    .widget-header h3 {
+        font-size: 18px;
+    }
+    
+    .hotel-info h4 {
+        font-size: 16px;
+    }
+    
+    .price-amount {
+        font-size: 20px;
+    }
+}

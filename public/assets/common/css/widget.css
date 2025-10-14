@@ -1,0 +1,429 @@
+body{
+    position: relative !important;
+    overflow-x: hidden !important;
+}
+
+html{
+    overflow-x: hidden !important}
+
+/* Removes the clear button from date inputs */
+input[type="date"]::-webkit-clear-button {
+    display: none;
+}
+
+/* Removes the spin button */
+input[type="date"]::-webkit-inner-spin-button {
+    display: none;
+}
+
+/* Always display the drop down caret */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    color: #2c3e50;
+}
+
+/* A few custom styles for date inputs */
+input[type="date"] {
+    appearance: none;
+    -webkit-appearance: none;
+    color: #95a5a6;
+    font-family: "Helvetica", arial, sans-serif;
+    font-size: 18px;
+    border:1px solid #ecf0f1;
+    background:#ecf0f1;
+    padding:5px;
+    display: inline-block !important;
+    visibility: visible !important;
+}
+
+input[type="date"], focus {
+    color: #95a5a6;
+    box-shadow: none;
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none;
+}
+
+.hoteldigilab-widget div{
+    font-family: inherit;
+}
+
+
+.hoteldigilab-loading{
+    position: absolute;
+    top: 0;
+    z-index: 9999;
+    height: 100%;
+    width: 100%;
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+    background: #000 url(../img/loading.gif) 41% 50% no-repeat !important;
+    opacity: 0.5;
+}
+
+.hoteldigilab-widget{
+    z-index: 9999;
+    position:absolute;
+    top: 50px;
+    right: -275px;
+    font-family: 'Lato', sans-serif;
+}
+
+.hoteldigilab-reservation-button{
+    pointer-events: all !important;
+    cursor: pointer;
+    position: relative;
+    top: 120px;
+    height: 150px;
+    width: 42px;
+    background-color: #740202;
+    color: #FFF;
+    border-radius: 15px 0 0 15px;
+    float:left;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, .2);
+}
+
+.hoteldigilab-reservation-button-text{
+    position: absolute;
+    top: 32%;
+    left: -50px;
+    text-align: center;
+    height: 50px;
+    width: 150px;
+    -webkit-transform: rotate(-90deg);
+    -moz-transform: rotate(-90deg);
+    -ms-transform: rotate(-90deg);
+    -o-transform: rotate(-90deg);
+}
+
+.hoteldigilab-reservation-button-img{
+    float: right;
+    position: absolute;
+    right: 0px;
+    top: 36%;
+}
+
+.hoteldigilab-reservation-button-img img{
+    height: 35px;
+}
+
+.no-availability{
+    color: red;
+    text-align: center;
+    font-size: 11px;
+    line-height: 20px;
+}
+
+#hoteldigilab-sabee_price{
+    font-size: 18px;
+    color: #375011d4;
+}
+
+#hoteldigilab-sabee_currency{
+    color: #375011d4;
+}
+
+.hoteldigilab-main{
+    width: 275px;
+    display: block;
+    background-color: #FFF;
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+    padding: 20px 0 20px 0;
+    float:right
+}
+
+.hoteldigilab-red-area{
+    background-color: #740202;
+    padding: 10px 20px 20px 20px;
+    color: #FFF;
+}
+.hoteldigilab-logo img{
+    width: 50px;
+    float:left;
+    margin-top: 5px;
+}
+
+.hoteldigilab-currency{
+    float: right;
+}
+
+.hoteldigilab-clear{
+    clear: both;
+}
+
+.hoteldigilab-main-title{
+    color: #FFF;
+    font-weight: 600;
+    letter-spacing: -.5px;
+    line-height: 34px;
+    text-align: center;
+    /*margin-top: 20px;*/
+}
+
+.sabee-link{
+    text-decoration:none !important;
+}
+
+.hoteldigilab-discounted-rate-btn{
+    background-color: #FFF;
+    font-weight: bold;
+    text-align: center;
+    padding: 8px;
+    border-radius: 5px;
+    font-size: 12px;
+    margin-top: 10px;
+    color: #375011d4;
+    text-decoration: none !important;
+}
+
+.hoteldigilab-reservation-text{
+    font-weight: bold;
+    font-size: 15px;
+    margin-top: 15px;
+}
+
+.hoteldigilab-promoted-text ul{
+    font-size: 15px;
+    font-weight: 500;
+    padding: 8px 0 0 14px;
+    line-height: 20px;
+    margin: 0;
+}
+
+.hoteldigilab-bottom-area{
+    padding: 10px 20px 10px 20px;
+}
+
+.hoteldigilab-date{
+    margin-bottom: 5%;
+}
+
+.hoteldigilab-date-select{
+    display: flex;
+    display: -webkit-flex;
+}
+
+.hoteldigilab-date-select input{
+    /*font-weight: bold;*/
+}
+
+.hoteldigilab-date input[type="date"]{
+    font-weight: bold;
+    margin-bottom: 0;
+    width: 42%;
+    font-size: 11px;
+    float: left;
+    margin-right: 5px;
+    line-height: 16px;
+    height: 24px;
+    padding-top: 2px !important;
+    padding-bottom: 0 !important;
+    vertical-align: middle !important;
+    min-height: 24px;
+    padding-left: 5px !important;
+    padding-right: 0px !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+    margin: 0px;
+}
+
+.hoteldigilab-dateSubmitBtn{
+    height: 23px !important;
+    width: 25px !important;
+    -moz-box-sizing: content-box; /* or `border-box` */
+    -webkit-box-sizing: content-box;
+    box-sizing: content-box;
+    float:left;
+    padding: 0 !important;
+    border: 1px solid darkgrey !important;
+}
+
+.hoteldigilab-price-from{
+    font-weight: 500;
+    margin-top: 2%;
+}
+
+.hoteldigilab-from-price{
+    float: right;
+    font-size: 14px;
+}
+
+.hoteldigilab-from-logo{
+    float: left;
+    max-height: 15px;
+    max-width: 15px;
+    position: relative;
+    top: 3px;
+}
+
+.hoteldigilab-from-logo img{
+    height: 15px;
+}
+
+.hoteldigilab-from-text{
+    padding-left: 5px;
+    float:left;
+    font-size: 16px;
+
+}
+
+
+
+.hoteldigilab-currencies{
+    min-height: 25px;
+    margin: 10px auto;
+    height: 25px;
+    padding: 0px !important;
+    text-align-last: center;
+    border-radius: 5px;
+    width: 25px !important;
+    font-weight: bold;
+    background-color: #FFF;
+    line-height: 24px;
+    color: #000;
+}
+
+.nd_options_customizer_forms select{
+    padding: 0px !important;
+}
+
+.hoteldigilab-channel-prices{
+    line-height: 20px;
+}
+
+/******************************************\
+        Exit Widget
+\******************************************/
+
+.hoteldigilab-top-exit-trigger{
+    position: absolute;
+    z-index: 9999;
+    display: block;
+    top: 0px;
+    /* right: 5px; */
+    opacity: 0;
+    height: 2px;
+    width: 100%;
+    background-color: #000;
+
+}
+
+.hoteldigilab-exit-background-cover{
+    display: none;
+    position:absolute;
+    background: #000 50% 50% no-repeat !important;
+    opacity: 0.5;
+    height: 100%;
+    width: 100%;
+    z-index: 9995;
+}
+
+.hoteldigilab-exit-widget{
+    display: none;
+    z-index: 9999;
+    width: 500px;
+    position: absolute;
+    top: 50px;
+    left: 0;
+    right: 0;
+    margin-right: auto;
+    margin-left: auto;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0px 1px 3px #666;
+    width: 500px;
+    font-family: 'Lato', sans-serif !important;
+}
+
+.hoteldigilab-close-exit-widget{
+    width: 25px;
+    height: 25px;
+    text-align: center;
+    border: 1px solid #e4e4e4;
+    background-color: #fff;
+    color: #740202;
+    border-radius: 100%;
+    position: relative;
+    top: -10px;
+    float: right;
+    right: -10px;
+}
+
+.hoteldigilab-exit-widget-top-section{
+    padding: 20px;
+}
+
+.hoteldigilab-exit-widget-middle-section{
+    padding: 0 50px 0px 50px;
+}
+
+.hoteldigilab-exit-widget a{
+    text-decoration: none;
+}
+
+.hoteldigilab-exit-widget-main-head{
+    color: #740202;
+    font-size: 25px;
+    font-weight: bold;
+
+}
+
+.logo-band{
+    padding-top: 10px;
+    text-align: center;
+    border-radius: 10px 10px 0px 0px;
+}
+
+.logo-band img{
+    height: 40px;
+    width: 40px;
+}
+
+.hoteldigilab-exit-widget-discount-code-title{
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.hoteldigilab-exit-widget-sub-text{
+    letter-spacing: .2px;
+    font-size: 13px;
+    padding-top: 30px;
+    line-height: 20px;
+}
+
+.hoteldigilab-exit-widget-sub-text ul{
+    padding-bottom: 0px;
+    margin-bottom: 0px;
+}
+
+.hoteldigilab-exit-widget-discount-code{
+    padding: 10px;
+    text-transform: uppercase;
+    text-align: center;
+    border: 1px solid #ddd;
+    border-radius: 2px;
+    box-shadow: 0px 1px 3px #ddd;
+    font-size: 22px;
+    color: #637d96;
+}
+
+.hoteldigilab-exit-widget-bottom-button{
+    background-color: #740202;
+    padding: 14px;
+    color: #fff;
+    box-shadow: 0px 1px 1px #222;
+    text-transform: uppercase;
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 0px 0px 10px 10px;
+}
+
+.hoteldigilab-best-offers{
+    padding-top: 20px;
+}
+
+.hoteldigilab-best-offers ul{
+    list-style: disc;
+    padding-left: 16px;
+}

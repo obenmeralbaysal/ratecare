@@ -1,0 +1,40 @@
+{
+    "name": "modelizer/selenium",
+    "description": "Selenium Package for laravel 5.",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Mohammed Mudasir",
+            "email": "hello@mudasir.me"
+        },
+        {
+            "name": "John Hoopes",
+            "email": "john.hoopes@madisoncreativeweb.com"
+        }
+    ],
+    "require": {
+        "laravel/framework": ">=5.0 || <=5.5",
+        "phpunit/phpunit-selenium": "~1.2",
+        "guzzlehttp/guzzle": "^6.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "Modelizer\\Selenium\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modelizer\\Selenium\\Test\\" : "tests"
+        }
+    },
+    "require-dev": {
+        "orchestra/testbench": "^3.3"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modelizer\\Selenium\\SeleniumServiceProvider"
+            ]
+        }
+    }
+}

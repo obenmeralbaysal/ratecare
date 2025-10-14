@@ -1,0 +1,8 @@
+{
+    "name": "sapistudio/seleniumstealth",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+         "psr-4": { "SapiStudio\\SeleniumStealth\\": "src/" }
+    }
+}
