@@ -2,11 +2,11 @@
 <html class="no-js" lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="csrf-token" content="{{ csrfToken() }}">
+    <meta name="csrf-token" content="<?php echo csrfToken(); ?>">
     <meta http-equiv="X-UA-Compatible" content="IE=Edge">
     <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
     <title>RateCare | Users Management</title>
-    <link rel="icon" href="{{ asset('assets/images/favicon.ico') }}" type="image/x-icon">
+    <link rel="icon" href="<?php echo asset('assets/images/favicon.ico'); ?>" type="image/x-icon">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
     <link href="https://fonts.googleapis.com/css?family=Muli:300,400,600,700" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/material-design-iconic-font/2.2.0/css/material-design-iconic-font.min.css" rel="stylesheet">
@@ -247,8 +247,8 @@
             <li>
                 <div class="navbar-header">
                     <a href="javascript:void(0);" class="h-bars">☰</a>
-                    <a class="navbar-brand" href="{{ url('/dashboard') }}">
-                        <img src="{{ asset('common/img/rate-care-logo.fw.png') }}" alt="RateCare">
+                    <a class="navbar-brand" href="<?php echo url('/dashboard'); ?>">
+                        <img src="<?php echo asset('common/img/rate-care-logo.fw.png'); ?>" alt="RateCare">
                     </a>
                 </div>
             </li>
@@ -257,7 +257,7 @@
                 <a href="javascript:void(0);" class="js-right-sidebar">
                     <i class="zmdi zmdi-settings"></i>
                 </a>
-                <a href="{{ url('/logout') }}" class="mega-menu">
+                <a href="<?php echo url('/logout'); ?>" class="mega-menu">
                     <i class="zmdi zmdi-power"></i>
                 </a>
             </li>
@@ -271,7 +271,7 @@
             <div class="col-md-12">
                 <ul class="h-menu">
                     <li>
-                        <a href="{{ url('/dashboard') }}">
+                        <a href="<?php echo url('/dashboard'); ?>">
                             <i class="zmdi zmdi-home"></i>
                         </a>
                     </li>
@@ -279,13 +279,13 @@
                         <a href="javascript:void(0)">Users</a>
                     </li>
                     <li>
-                        <a href="{{ url('/admin/hotels') }}">Hotels</a>
+                        <a href="<?php echo url('/admin/hotels'); ?>">Hotels</a>
                     </li>
                     <li>
-                        <a href="{{ url('/admin/widgets') }}">Widgets</a>
+                        <a href="<?php echo url('/admin/widgets'); ?>">Widgets</a>
                     </li>
                     <li>
-                        <a href="{{ url('/admin/settings') }}">Settings</a>
+                        <a href="<?php echo url('/admin/settings'); ?>">Settings</a>
                     </li>
                 </ul>
             </div>
@@ -299,12 +299,12 @@
             <div class="row clearfix">
                 <div class="col-lg-5 col-md-5 col-sm-12">
                     <h2 class="float-left">Users</h2>
-                    <a href="{{ url('/admin/users/create') }}">
+                    <a href="<?php echo url('/admin/users/create'); ?>">
                         <button class="new-widget-btn btn btn-primary btn-sm float-left">
                             <i class="zmdi zmdi-plus"></i> New User
                         </button>
                     </a>
-                    <a href="{{ url('/admin/users/invite') }}">
+                    <a href="<?php echo url('/admin/users/invite'); ?>">
                         <button class="new-widget-btn btn btn-primary btn-sm float-left">
                             <i class="zmdi zmdi-mail-send"></i> Invite
                         </button>
@@ -318,8 +318,8 @@
 
                 <div class="card">
                     <div class="body">
-                        <form method="GET" action="{{ url('/admin/users') }}" accept-charset="UTF-8" id="filter-form" class="input-group">
-                            <input class="form-control filter-text" name="q" value="{{ $search }}"
+                        <form method="GET" action="<?php echo url('/admin/users'); ?>" accept-charset="UTF-8" id="filter-form" class="input-group">
+                            <input class="form-control filter-text" name="q" value="<?php echo htmlspecialchars($search); ?>"
                                    placeholder="Enter text to search by name or email">
                             <div class="input-group-append">
                                 <button type="submit" name="filter" value="1"
@@ -346,7 +346,7 @@
                             </tr>
                             </thead>
                             <tbody>
-                                @if(empty($users))
+                                <?php if(empty($users)): ?>
                                     <tr>
                                         <td colspan="7" class="text-center">
                                             <div class="py-4">
@@ -355,52 +355,52 @@
                                             </div>
                                         </td>
                                     </tr>
-                                @else
-                                    @foreach($users as $user)
+                                <?php else: ?>
+                                    <?php foreach($users as $user): ?>
                                         <tr>
-                                            <th scope="row">{{ $user['id'] }}</th>
+                                            <th scope="row"><?php echo htmlspecialchars($user['id']); ?></th>
                                             <td class="td-namesurname">
-                                                <a href="{{ url('/admin/users/edit/' . $user['id']) }}">
-                                                    {{ $user['namesurname'] }}
+                                                <a href="<?php echo url('/admin/users/edit/' . $user['id']); ?>">
+                                                    <?php echo htmlspecialchars($user['namesurname']); ?>
                                                 </a>
                                             </td>
                                             <td>
                                                 <!-- Hotel info will be added later -->
                                                 <span class="text-muted">-</span>
                                             </td>
-                                            <td>{{ $user['email'] }}</td>
+                                            <td><?php echo htmlspecialchars($user['email']); ?></td>
                                             <td class="text-center">
-                                                @if($user['is_admin'])
+                                                <?php if($user['is_admin']): ?>
                                                     <span class="badge badge-danger">ADMIN</span>
-                                                @elseif($user['user_type'] == 2)
+                                                <?php elseif($user['user_type'] == 2): ?>
                                                     <span class="badge badge-warning">RESELLER</span>
-                                                @elseif($user['reseller_id'] > 0)
+                                                <?php elseif($user['reseller_id'] > 0): ?>
                                                     <span class="badge badge-info">CUSTOMER</span>
-                                                    @if($user['reseller_name'])
-                                                        <br><small class="text-muted">{{ $user['reseller_name'] }}</small>
-                                                    @endif
-                                                @else
+                                                    <?php if($user['reseller_name']): ?>
+                                                        <br><small class="text-muted"><?php echo htmlspecialchars($user['reseller_name']); ?></small>
+                                                    <?php endif; ?>
+                                                <?php else: ?>
                                                     <span class="badge badge-secondary">STANDARD</span>
-                                                @endif
+                                                <?php endif; ?>
                                             </td>
-                                            <td class="text-nowrap">{{ formatDate($user['created_at'], 'M d, Y') }}</td>
+                                            <td class="text-nowrap"><?php echo formatDate($user['created_at'], 'M d, Y'); ?></td>
                                             <td class="text-nowrap text-right">
-                                                <a href="{{ url('/admin/users/switch/' . $user['id'] . '?redirect=hotels') }}" title="EDIT PROPERTY">
+                                                <a href="<?php echo url('/admin/users/switch/' . $user['id'] . '?redirect=hotels'); ?>" title="EDIT PROPERTY">
                                                     <button class="btn btn-warning btn-sm"><i class="zmdi zmdi-city-alt"></i></button>
                                                 </a>
-                                                <a href="{{ url('/admin/users/switch/' . $user['id'] . '?redirect=widgets') }}" title="EDIT WIDGET">
+                                                <a href="<?php echo url('/admin/users/switch/' . $user['id'] . '?redirect=widgets'); ?>" title="EDIT WIDGET">
                                                     <button class="btn btn-warning btn-sm"><i class="zmdi zmdi-layers"></i></button>
                                                 </a>
-                                                <a href="{{ url('/admin/users/edit/' . $user['id']) }}" title="EDIT USER">
+                                                <a href="<?php echo url('/admin/users/edit/' . $user['id']); ?>" title="EDIT USER">
                                                     <button class="btn btn-warning btn-sm"><i class="zmdi zmdi-edit"></i></button>
                                                 </a>
-                                                <a href="{{ url('/admin/users/delete/' . $user['id']) }}" onclick="return confirm('Are you sure?')" title="DELETE USER">
+                                                <a href="<?php echo url('/admin/users/delete/' . $user['id']); ?>" onclick="return confirm('Are you sure?')" title="DELETE USER">
                                                     <span class="btn btn-danger btn-sm"><i class="zmdi zmdi-delete"></i></span>
                                                 </a>
                                             </td>
                                         </tr>
-                                    @endforeach
-                                @endif
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
                             </tbody>
                         </table>
 
