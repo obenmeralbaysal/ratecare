@@ -744,6 +744,8 @@ class ApiController extends BaseController
             $this->logMessage("OtelZ API: Missing credentials", 'ERROR');
             return "NA";
         }
+        
+        $this->logMessage("OtelZ API: Using credentials - Username: " . $username . ", Partner ID: " . env('OTELZ_PARTNER_ID', 1316), 'DEBUG');
 
         $data = [
             "detail_request" => [
@@ -770,14 +772,14 @@ class ApiController extends BaseController
             'Authorization: Basic ' . base64_encode("$username:$passwd"),
         ];
 
-        $ch = curl_init('https://fullconnect.otelz.com/v1/detail/availability');
+        $ch = curl_init('https://fullconnect.otelz.com/v2/detail/availability');
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
         curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -792,7 +794,13 @@ class ApiController extends BaseController
 
         // Check HTTP status
         if ($httpCode !== 200) {
-            $this->logMessage("OtelZ API HTTP error: " . $httpCode . " - Response: " . substr($response, 0, 200), 'ERROR');
+            $this->logMessage("OtelZ API HTTP error: " . $httpCode . " - Response: " . substr($response, 0, 500), 'ERROR');
+            
+            // Special handling for 401 Unauthorized
+            if ($httpCode === 401) {
+                $this->logMessage("OtelZ API: Authentication failed - check credentials and partner_id", 'ERROR');
+            }
+            
             return "NA";
         }
 
