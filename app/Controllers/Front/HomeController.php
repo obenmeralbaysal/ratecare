@@ -31,7 +31,7 @@ class HomeController extends BaseController
             return $this->redirectToDashboard();
         }
         
-        return $this->view('front.login.login', [
+        echo $this->view('front.login.simple_login', [
             'title' => 'Login - Hotel DigiLab'
         ]);
     }
