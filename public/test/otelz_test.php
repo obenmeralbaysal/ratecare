@@ -9,8 +9,8 @@ echo base64_encode("kucukoteller:4;q)Dx9#");
 // Test parameters
 $facilityID = 9335; // Test facility ID
 $currency = "TRY";
-$startDate = "2025-11-28";
-$endDate = "2025-11-30";
+$startDate = "2025-10-20";
+$endDate = "2025-10-21";
 $partner_id = 1316;
 
 // Geolocation test (Istanbul center)
@@ -47,7 +47,7 @@ function testOtelZSearchHotelIdList($partner_id, $facility_references, $currency
                 "children" => []
             ]
         ],
-        "currency" => $currency,
+        //"currency" => $currency,
         "price_formatter" => [
             "decimal_digit_number" => 2
         ],
