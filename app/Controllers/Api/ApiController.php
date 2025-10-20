@@ -242,21 +242,28 @@ class ApiController extends BaseController
      */
     private function addBookingPlatform(&$response, $hotel, $currency, $checkIn, $checkOut, $adult)
     {
+        $this->logMessage("Booking.com: Starting platform check for hotel " . $hotel['name'], 'DEBUG');
+        $this->logMessage("Booking.com: booking_is_active = " . ($hotel['booking_is_active'] ? 'true' : 'false'), 'DEBUG');
+        $this->logMessage("Booking.com: booking_url = " . ($hotel['booking_url'] ?? 'null'), 'DEBUG');
+        
         if ($hotel['booking_is_active'] && !empty($hotel['booking_url'])) {
             $this->logMessage("Booking.com: Processing hotel " . $hotel['name'] . " with URL " . $hotel['booking_url'], 'INFO');
             
             $price = $this->getBookingPrice($hotel, $currency, $checkIn, $checkOut);
+            $this->logMessage("Booking.com: Received price result: " . $price, 'DEBUG');
             
             // Only add to response if price is valid
             if ($price !== "NA") {
                 $url = $this->getBookingUrl($hotel, $currency, $checkIn, $checkOut);
                 $this->addPlatformToResponse($response, 'booking', 'Booking.com', $price, $url);
-                $this->logMessage("Booking.com: Added to response with price " . $price, 'INFO');
+                $this->logMessage("Booking.com: Successfully added to response with price " . $price, 'INFO');
             } else {
-                $this->logMessage("Booking.com: Price not available for " . $hotel['name'], 'WARNING');
+                $this->logMessage("Booking.com: Price not available for " . $hotel['name'] . " - not adding to response", 'WARNING');
             }
         } else {
-            $this->logMessage("Booking.com: Skipped - not active or no URL for " . $hotel['name'], 'INFO');
+            $booking_active = $hotel['booking_is_active'] ?? 'not_set';
+            $booking_url = $hotel['booking_url'] ?? 'not_set';
+            $this->logMessage("Booking.com: Skipped for " . $hotel['name'] . " - Active: {$booking_active}, URL: {$booking_url}", 'WARNING');
         }
     }
     
@@ -570,7 +577,10 @@ class ApiController extends BaseController
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
             curl_setopt($ch, CURLOPT_TIMEOUT, 0);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0');
             curl_setopt($ch, CURLOPT_POST, 0);
+            curl_setopt($ch, CURLOPT_PROXY, 'brd.superproxy.io:22225');
+            curl_setopt($ch, CURLOPT_PROXYUSERPWD, 'brd-customer-hl_e5f2315f-zone-datacenter_proxy1-country-nl:uvmqoi66peju');
         }
 
         return @curl_exec($ch);
@@ -592,20 +602,16 @@ class ApiController extends BaseController
     {
         $this->logMessage("Booking.com API: Starting price request for URL {$url}, currency {$currency}, dates {$checkinDate} to {$checkoutDate}", 'INFO');
         
+        // Ensure URL ends with .tr.html
         if (substr($url, -8) != ".tr.html") {
             $url = str_replace(".html", ".tr.html", $url);
+            $this->logMessage("Booking.com: URL corrected to " . $url, 'DEBUG');
         }
 
         $search_url = $url . "?selected_currency=" . $currency . "&checkin=" . $checkinDate . "&checkout=" . $checkoutDate;
         $this->logMessage("Booking.com: Fetching URL - " . $search_url, 'INFO');
         
-        $html = $this->getHTML($search_url, 30, 2);
-        
-        if (!$html) {
-            $this->logMessage("Booking.com: Failed to fetch HTML content", 'ERROR');
-            return "NA";
-        }
-
+        // Get currency symbol
         switch ($currency) {
             case "EUR":
                 $currency_symbol = "€";
@@ -616,39 +622,57 @@ class ApiController extends BaseController
             default:
                 $currency_symbol = "TL";
         }
+        
+        // Use only proxy method (type=2)
+        $this->logMessage("Booking.com: Using proxy method only", 'DEBUG');
+        
+        $html = $this->getHTML($search_url, 30, 2);
+        
+        if (!$html) {
+            $this->logMessage("Booking.com: Failed to fetch HTML with proxy method", 'ERROR');
+            return "NA";
+        }
+        
+        $this->logMessage("Booking.com: HTML fetched successfully (" . strlen($html) . " bytes) with proxy method", 'DEBUG');
 
         // Try primary price pattern
-        $price = $this->search('"b_price":"' . $currency_symbol, '"', $html);
+        $price_pattern = '"b_price":"' . $currency_symbol;
+        $price = $this->search($price_pattern, '"', $html);
         
-        if ($price != []) {
+        if (!empty($price)) {
             $finalPrice = round(preg_replace('/\xc2\xa0/', "", str_replace(".", "", trim($price[0]))));
-            $this->logMessage("Booking.com: Found primary price - " . $finalPrice, 'INFO');
+            $this->logMessage("Booking.com: Found primary price - " . $finalPrice . " with proxy method", 'INFO');
             return $finalPrice;
         }
         
-        // Try alternative price pattern (like old system)
+        $this->logMessage("Booking.com: Primary price pattern not found with proxy method", 'DEBUG');
+        
+        // Try alternative price pattern
         $alternativePrice = $this->search("tarihlerinizde", "gibi", $html);
         
-        if ($alternativePrice != []) {
+        if (!empty($alternativePrice)) {
+            $this->logMessage("Booking.com: Alternative price context found with proxy method", 'DEBUG');
+            
+            // Search for specific currency in alternative price
             switch ($currency) {
                 case "EUR":
-                    $alternativePrice = $this->search("tarihlerinizde \xE2\x82\xAc", "gibi", $html);
+                    $currencyPrice = $this->search("tarihlerinizde €", "gibi", $html);
                     break;
                 case "USD":
-                    $alternativePrice = $this->search("tarihlerinizde US$", "gibi", $html);
+                    $currencyPrice = $this->search("tarihlerinizde US$", "gibi", $html);
                     break;
                 default:
-                    $alternativePrice = $this->search("tarihlerinizde TL", "gibi", $html);
+                    $currencyPrice = $this->search("tarihlerinizde TL", "gibi", $html);
             }
             
-            if ($alternativePrice != []) {
-                $finalPrice = round(preg_replace('/\xc2\xa0/', "", str_replace(".", "", trim($alternativePrice[0]))));
-                $this->logMessage("Booking.com: Found alternative price - " . $finalPrice, 'INFO');
+            if (!empty($currencyPrice)) {
+                $finalPrice = round(preg_replace('/\xc2\xa0/', "", str_replace(".", "", trim($currencyPrice[0]))));
+                $this->logMessage("Booking.com: Found alternative price - " . $finalPrice . " with proxy method", 'INFO');
                 return $finalPrice;
             }
         }
         
-        $this->logMessage("Booking.com: No price found in HTML content", 'WARNING');
+        $this->logMessage("Booking.com: No price found with proxy method", 'WARNING');
         return "NA";
     }
     
@@ -747,21 +771,20 @@ class ApiController extends BaseController
         
         $this->logMessage("OtelZ API: Using credentials - Username: " . $username . ", Partner ID: " . env('OTELZ_PARTNER_ID', 1316), 'DEBUG');
 
+        // Use working format from test (simplified)
         $data = [
-            "detail_request" => [
-                "facility_reference" => $facilityID,
-                "start_date" => $startDate,
-                "end_date" => $endDate,
-                "party" => [["adults" => 2, "children" => []]],
-                "lang" => "tr",
-                "currency" => $currency,
-                "price_formatter" => ["decimal_digit_number" => 2],
-                "user_country" => "TR",
-                "device_type" => "Desktop",
-                "request_type" => "Strict",
-                "web_hook_url" => "",
-                "partner_id" => (int)env('OTELZ_PARTNER_ID', 1316)
-            ]
+            "partner_id" => (int)env('OTELZ_PARTNER_ID', 1316),
+            "facility_reference" => $facilityID,
+            "start_date" => $startDate,
+            "end_date" => $endDate,
+            "party" => [
+                [
+                    "adults" => 2,
+                    "children" => [],
+                ],
+            ],
+            "lang" => "tr",
+            "user_country" => "TR",
         ];
 
         $json = json_encode($data);
@@ -772,14 +795,14 @@ class ApiController extends BaseController
             'Authorization: Basic ' . base64_encode("$username:$passwd"),
         ];
 
-        $ch = curl_init('https://fullconnect.otelz.com/v2/detail/availability');
+        $ch = curl_init('https://fullconnect.otelz.com/v1/detail/availability');
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
         curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
