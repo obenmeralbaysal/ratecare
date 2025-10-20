@@ -18,6 +18,10 @@ $router->group(['middleware' => ['AuthMiddleware']], function($router) {
     $router->get('/admin/users/edit/{id}', 'Admin\UsersController@edit');
     $router->post('/admin/users/edit/{id}', 'Admin\UsersController@update');
     $router->get('/admin/users/delete/{id}', 'Admin\UsersController@delete');
+    
+    // Admin Hotels
+    $router->get('/admin/users/switch/{id}', 'Admin\HotelsController@edit');
+    $router->post('/admin/hotels/update/{id}', 'Admin\HotelsController@update');
 });
 
 $router->get('/test', 'TestController@index');

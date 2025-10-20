@@ -522,14 +522,8 @@
                                                 <a href="<?php echo url('/admin/users/switch/' . $user['id'] . '?redirect=hotels'); ?>" title="EDIT PROPERTY">
                                                     <button class="btn btn-warning btn-sm"><i class="zmdi zmdi-city-alt"></i></button>
                                                 </a>
-                                                <a href="<?php echo url('/admin/users/switch/' . $user['id'] . '?redirect=widgets'); ?>" title="EDIT WIDGET">
-                                                    <button class="btn btn-warning btn-sm"><i class="zmdi zmdi-layers"></i></button>
-                                                </a>
-                                                <a href="<?php echo url('/admin/users/edit/' . $user['id']); ?>" title="EDIT USER">
-                                                    <button class="btn btn-warning btn-sm"><i class="zmdi zmdi-edit"></i></button>
-                                                </a>
-                                                <a href="<?php echo url('/admin/users/delete/' . $user['id']); ?>" onclick="return confirm('Are you sure?')" title="DELETE USER">
-                                                    <span class="btn btn-danger btn-sm"><i class="zmdi zmdi-delete"></i></span>
+                                                <a href="<?php echo url('/admin/users/delete/' . $user['id']); ?>" onclick="return confirm('Are you sure you want to delete this user?')" title="DELETE USER">
+                                                    <button class="btn btn-danger btn-sm"><i class="zmdi zmdi-delete"></i></button>
                                                 </a>
                                             </td>
                                         </tr>
