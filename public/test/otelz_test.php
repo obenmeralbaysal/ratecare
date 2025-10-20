@@ -7,7 +7,7 @@ echo base64_encode("kucukoteller:4;q)Dx9#");
  */
 
 // Test parameters
-$facilityID = 17828; // Test facility ID
+$facilityID = 9335; // Test facility ID
 $currency = "TRY";
 $startDate = "2025-11-28";
 $endDate = "2025-11-30";
