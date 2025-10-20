@@ -52,25 +52,46 @@ class UsersController extends BaseController
      */
     public function index()
     {
-        // Get search query
+        // Get search query and pagination
         $search = $this->input('q', '');
+        $page = (int)$this->input('page', 1);
+        $perPage = 10;
         
         // Get users with pagination
-        $users = $this->getUsersList($search);
+        $result = $this->getUsersList($search, $page, $perPage);
         
         echo $this->view('admin.users.index', [
             'title' => 'Users Management',
-            'users' => $users,
-            'search' => $search
+            'users' => $result['users'],
+            'search' => $search,
+            'pagination' => $result['pagination']
         ]);
     }
     
     /**
      * Get users list with search and pagination
      */
-    private function getUsersList($search = '')
+    private function getUsersList($search = '', $page = 1, $perPage = 10)
     {
         try {
+            // Count total records
+            $countSql = "SELECT COUNT(*) as total FROM users u WHERE 1=1";
+            $countParams = [];
+            
+            if (!empty($search)) {
+                $countSql .= " AND (u.namesurname LIKE ? OR u.email LIKE ?)";
+                $countParams[] = "%{$search}%";
+                $countParams[] = "%{$search}%";
+            }
+            
+            $totalResult = $this->userModel->raw($countSql, $countParams);
+            $total = $totalResult[0]['total'] ?? 0;
+            
+            // Calculate pagination
+            $totalPages = ceil($total / $perPage);
+            $offset = ($page - 1) * $perPage;
+            
+            // Get users data
             $sql = "SELECT 
                         u.id,
                         u.namesurname,
@@ -93,13 +114,41 @@ class UsersController extends BaseController
                 $params[] = "%{$search}%";
             }
             
-            $sql .= " ORDER BY u.created_at DESC LIMIT 50";
+            $sql .= " ORDER BY u.created_at DESC LIMIT ? OFFSET ?";
+            $params[] = $perPage;
+            $params[] = $offset;
             
-            return $this->userModel->raw($sql, $params);
+            $users = $this->userModel->raw($sql, $params);
+            
+            return [
+                'users' => $users,
+                'pagination' => [
+                    'current_page' => $page,
+                    'per_page' => $perPage,
+                    'total' => $total,
+                    'total_pages' => $totalPages,
+                    'has_prev' => $page > 1,
+                    'has_next' => $page < $totalPages,
+                    'prev_page' => $page > 1 ? $page - 1 : null,
+                    'next_page' => $page < $totalPages ? $page + 1 : null
+                ]
+            ];
             
         } catch (\Exception $e) {
             error_log("Users list error: " . $e->getMessage());
-            return [];
+            return [
+                'users' => [],
+                'pagination' => [
+                    'current_page' => 1,
+                    'per_page' => $perPage,
+                    'total' => 0,
+                    'total_pages' => 0,
+                    'has_prev' => false,
+                    'has_next' => false,
+                    'prev_page' => null,
+                    'next_page' => null
+                ]
+            ];
         }
     }
     

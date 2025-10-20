@@ -134,6 +134,24 @@
             border-top: 1px solid #dee2e6;
         }
         
+        .table th {
+            vertical-align: middle;
+        }
+        
+        .table tbody tr {
+            vertical-align: middle;
+        }
+        
+        .table tbody tr td {
+            vertical-align: middle;
+            padding: 12px 8px;
+        }
+        
+        .table tbody tr th {
+            vertical-align: middle;
+            padding: 12px 8px;
+        }
+        
         .btn {
             border-radius: 4px;
             font-weight: 500;
@@ -208,6 +226,8 @@
             letter-spacing: 0.5px;
             padding: 4px 8px;
             border-radius: 12px;
+            display: inline-block;
+            vertical-align: middle;
         }
         
         .badge-danger {
@@ -236,6 +256,66 @@
         
         .mb-2 {
             margin-bottom: 0.5rem;
+        }
+        
+        .mt-3 {
+            margin-top: 1rem;
+        }
+        
+        .pagination-info {
+            margin-top: 15px;
+        }
+        
+        .pagination .page-link {
+            color: #007bff;
+            background-color: #fff;
+            border: 1px solid #dee2e6;
+            padding: 8px 12px;
+            margin: 0 2px;
+            border-radius: 4px;
+            text-decoration: none;
+        }
+        
+        .pagination .page-link:hover {
+            color: #0056b3;
+            background-color: #e9ecef;
+            border-color: #dee2e6;
+        }
+        
+        .pagination .page-item.active .page-link {
+            color: #fff;
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        
+        .pagination .page-item.disabled .page-link {
+            color: #6c757d;
+            background-color: #fff;
+            border-color: #dee2e6;
+            cursor: not-allowed;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .text-nowrap {
+            white-space: nowrap;
+        }
+        
+        /* Action buttons alignment */
+        .table tbody tr td:last-child {
+            vertical-align: middle;
+            text-align: right;
+        }
+        
+        .table tbody tr td .btn {
+            vertical-align: middle;
+            margin: 0 1px;
         }
     </style>
 </head>
@@ -405,25 +485,60 @@
                         </table>
 
                         <!-- Pagination -->
-                        <nav aria-label="Page navigation">
-                            <ul class="pagination">
-                                <li class="page-item disabled">
-                                    <span class="page-link">Previous</span>
-                                </li>
-                                <li class="page-item active">
-                                    <span class="page-link">1</span>
-                                </li>
-                                <li class="page-item">
-                                    <a class="page-link" href="#">2</a>
-                                </li>
-                                <li class="page-item">
-                                    <a class="page-link" href="#">3</a>
-                                </li>
-                                <li class="page-item">
-                                    <a class="page-link" href="#">Next</a>
-                                </li>
-                            </ul>
-                        </nav>
+                        <?php if($pagination['total_pages'] > 1): ?>
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination">
+                                    <!-- Previous Button -->
+                                    <?php if($pagination['has_prev']): ?>
+                                        <li class="page-item">
+                                            <a class="page-link" href="<?php echo url('/admin/users?page=' . $pagination['prev_page'] . ($search ? '&q=' . urlencode($search) : '')); ?>">Previous</a>
+                                        </li>
+                                    <?php else: ?>
+                                        <li class="page-item disabled">
+                                            <span class="page-link">Previous</span>
+                                        </li>
+                                    <?php endif; ?>
+                                    
+                                    <!-- Page Numbers -->
+                                    <?php 
+                                    $startPage = max(1, $pagination['current_page'] - 2);
+                                    $endPage = min($pagination['total_pages'], $pagination['current_page'] + 2);
+                                    ?>
+                                    
+                                    <?php for($i = $startPage; $i <= $endPage; $i++): ?>
+                                        <?php if($i == $pagination['current_page']): ?>
+                                            <li class="page-item active">
+                                                <span class="page-link"><?php echo $i; ?></span>
+                                            </li>
+                                        <?php else: ?>
+                                            <li class="page-item">
+                                                <a class="page-link" href="<?php echo url('/admin/users?page=' . $i . ($search ? '&q=' . urlencode($search) : '')); ?>"><?php echo $i; ?></a>
+                                            </li>
+                                        <?php endif; ?>
+                                    <?php endfor; ?>
+                                    
+                                    <!-- Next Button -->
+                                    <?php if($pagination['has_next']): ?>
+                                        <li class="page-item">
+                                            <a class="page-link" href="<?php echo url('/admin/users?page=' . $pagination['next_page'] . ($search ? '&q=' . urlencode($search) : '')); ?>">Next</a>
+                                        </li>
+                                    <?php else: ?>
+                                        <li class="page-item disabled">
+                                            <span class="page-link">Next</span>
+                                        </li>
+                                    <?php endif; ?>
+                                </ul>
+                                
+                                <!-- Pagination Info -->
+                                <div class="pagination-info text-center mt-3">
+                                    <small class="text-muted">
+                                        Showing <?php echo (($pagination['current_page'] - 1) * $pagination['per_page']) + 1; ?> 
+                                        to <?php echo min($pagination['current_page'] * $pagination['per_page'], $pagination['total']); ?> 
+                                        of <?php echo $pagination['total']; ?> results
+                                    </small>
+                                </div>
+                            </nav>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
