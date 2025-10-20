@@ -464,12 +464,6 @@
                         <a href="javascript:void(0)">Users</a>
                     </li>
                     <li>
-                        <a href="<?php echo url('/admin/hotels'); ?>">Hotels</a>
-                    </li>
-                    <li>
-                        <a href="<?php echo url('/admin/widgets'); ?>">Widgets</a>
-                    </li>
-                    <li>
                         <a href="<?php echo url('/admin/settings'); ?>">Settings</a>
                     </li>
                 </ul>

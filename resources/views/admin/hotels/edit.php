@@ -296,12 +296,6 @@
                     <li>
                         <a href="<?php echo url('/admin/users'); ?>">Users</a>
                     </li>
-                    <li class="active">
-                        <a href="<?php echo url('/admin/hotels'); ?>">Hotels</a>
-                    </li>
-                    <li>
-                        <a href="<?php echo url('/admin/widgets'); ?>">Widgets</a>
-                    </li>
                     <li>
                         <a href="<?php echo url('/admin/settings'); ?>">Settings</a>
                     </li>

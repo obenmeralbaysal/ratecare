@@ -256,12 +256,6 @@
                         <a href="{{ url('/admin/users') }}">Users</a>
                     </li>
                     <li>
-                        <a href="{{ url('/admin/hotels') }}">Hotels</a>
-                    </li>
-                    <li>
-                        <a href="{{ url('/admin/widgets') }}">Widgets</a>
-                    </li>
-                    <li>
                         <a href="{{ url('/admin/settings') }}">Settings</a>
                     </li>
                 </ul>

@@ -268,26 +268,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="javascript:void(0)">Users</a>
-                        <ul class="sub-menu">
-                            <li><a href="{{ url('/admin/users') }}">All Users</a></li>
-                            <li><a href="{{ url('/admin/users/create') }}">New User</a></li>
-                            <li><a href="{{ url('/admin/users/invite') }}">Invite User</a></li>
-                        </ul>
-                    </li>
-                    <li>
-                        <a href="javascript:void(0)">Hotels</a>
-                        <ul class="sub-menu">
-                            <li><a href="{{ url('/admin/hotels') }}">All Hotels</a></li>
-                            <li><a href="{{ url('/admin/hotels/create') }}">New Hotel</a></li>
-                        </ul>
-                    </li>
-                    <li>
-                        <a href="javascript:void(0)">Widgets</a>
-                        <ul class="sub-menu">
-                            <li><a href="{{ url('/admin/widgets') }}">All Widgets</a></li>
-                            <li><a href="{{ url('/admin/widgets/create') }}">New Widget</a></li>
-                        </ul>
+                        <a href="{{ url('/admin/users') }}">Users</a>
                     </li>
                     <li>
                         <a href="{{ url('/admin/settings') }}">Settings</a>
@@ -327,26 +308,6 @@
                         <div class="body">
                             <i class="zmdi zmdi-hc-5x zmdi-email"></i>
                             <h6 class="m-t-20">INVITE USER</h6>
-                        </div>
-                    </a>
-                </div>
-            </div>
-            <div class="col-lg-4 col-md-6 col-sm-12 text-center">
-                <div class="card tasks_report">
-                    <a href="{{ url('/admin/hotels') }}">
-                        <div class="body">
-                            <i class="zmdi zmdi-hc-5x zmdi-city"></i>
-                            <h6 class="m-t-20">ALL HOTELS</h6>
-                        </div>
-                    </a>
-                </div>
-            </div>
-            <div class="col-lg-4 col-md-6 col-sm-12 text-center">
-                <div class="card tasks_report">
-                    <a href="{{ url('/admin/widgets') }}">
-                        <div class="body">
-                            <i class="zmdi zmdi-hc-5x zmdi-widgets"></i>
-                            <h6 class="m-t-20">ALL WIDGETS</h6>
                         </div>
                     </a>
                 </div>
