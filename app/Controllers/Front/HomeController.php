@@ -27,8 +27,8 @@ class HomeController extends BaseController
     public function login()
     {
         // Redirect if already logged in
-        if ($this->auth->check()) {
-            return $this->redirectToDashboard();
+        if (isset($_SESSION['user_id'])) {
+            return $this->redirect('/dashboard');
         }
         
         echo $this->view('front.login.simple_login', [

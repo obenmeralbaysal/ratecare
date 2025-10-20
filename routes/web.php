@@ -8,6 +8,16 @@ $router = Router::getInstance();
 $router->group(['middleware' => ['AuthMiddleware']], function($router) {
     $router->get('/', 'Admin\DashboardController@index');
     $router->get('/dashboard', 'Admin\DashboardController@index');
+    
+    // Admin Users
+    $router->get('/admin/users', 'Admin\UsersController@index');
+    $router->get('/admin/users/create', 'Admin\UsersController@create');
+    $router->post('/admin/users/create', 'Admin\UsersController@store');
+    $router->get('/admin/users/invite', 'Admin\UsersController@invite');
+    $router->post('/admin/users/invite', 'Admin\UsersController@sendInvite');
+    $router->get('/admin/users/edit/{id}', 'Admin\UsersController@edit');
+    $router->post('/admin/users/edit/{id}', 'Admin\UsersController@update');
+    $router->get('/admin/users/delete/{id}', 'Admin\UsersController@delete');
 });
 
 $router->get('/test', 'TestController@index');
