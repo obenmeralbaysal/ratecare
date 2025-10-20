@@ -317,6 +317,60 @@
             vertical-align: middle;
             margin: 0 1px;
         }
+        
+        /* Pagination goto styles */
+        .pagination-goto {
+            margin: 15px 0;
+        }
+        
+        .pagination-input {
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .pagination-input:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+            outline: none;
+        }
+        
+        .d-inline-flex {
+            display: inline-flex;
+        }
+        
+        .align-items-center {
+            align-items: center;
+        }
+        
+        .mr-2 {
+            margin-right: 0.5rem;
+        }
+        
+        .ml-2 {
+            margin-left: 0.5rem;
+        }
+        
+        .btn-outline-primary {
+            color: #007bff;
+            border-color: #007bff;
+            background-color: transparent;
+        }
+        
+        .btn-outline-primary:hover {
+            color: #fff;
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        
+        .form-control-sm {
+            height: calc(1.5em + 0.5rem + 2px);
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            border-radius: 0.2rem;
+        }
     </style>
 </head>
 <body class="theme-black">
@@ -488,14 +542,29 @@
                         <?php if($pagination['total_pages'] > 1): ?>
                             <nav aria-label="Page navigation">
                                 <ul class="pagination">
-                                    <!-- Previous Button -->
-                                    <?php if($pagination['has_prev']): ?>
+                                    <!-- First Button -->
+                                    <?php if($pagination['current_page'] > 1): ?>
                                         <li class="page-item">
-                                            <a class="page-link" href="<?php echo url('/admin/users?page=' . $pagination['prev_page'] . ($search ? '&q=' . urlencode($search) : '')); ?>">Previous</a>
+                                            <a class="page-link" href="<?php echo url('/admin/users?page=1' . ($search ? '&q=' . urlencode($search) : '')); ?>" title="First Page">
+                                                <i class="zmdi zmdi-skip-previous"></i> First
+                                            </a>
                                         </li>
                                     <?php else: ?>
                                         <li class="page-item disabled">
-                                            <span class="page-link">Previous</span>
+                                            <span class="page-link"><i class="zmdi zmdi-skip-previous"></i> First</span>
+                                        </li>
+                                    <?php endif; ?>
+                                    
+                                    <!-- Previous Button -->
+                                    <?php if($pagination['has_prev']): ?>
+                                        <li class="page-item">
+                                            <a class="page-link" href="<?php echo url('/admin/users?page=' . $pagination['prev_page'] . ($search ? '&q=' . urlencode($search) : '')); ?>" title="Previous Page">
+                                                <i class="zmdi zmdi-chevron-left"></i> Prev
+                                            </a>
+                                        </li>
+                                    <?php else: ?>
+                                        <li class="page-item disabled">
+                                            <span class="page-link"><i class="zmdi zmdi-chevron-left"></i> Prev</span>
                                         </li>
                                     <?php endif; ?>
                                     
@@ -520,14 +589,45 @@
                                     <!-- Next Button -->
                                     <?php if($pagination['has_next']): ?>
                                         <li class="page-item">
-                                            <a class="page-link" href="<?php echo url('/admin/users?page=' . $pagination['next_page'] . ($search ? '&q=' . urlencode($search) : '')); ?>">Next</a>
+                                            <a class="page-link" href="<?php echo url('/admin/users?page=' . $pagination['next_page'] . ($search ? '&q=' . urlencode($search) : '')); ?>" title="Next Page">
+                                                Next <i class="zmdi zmdi-chevron-right"></i>
+                                            </a>
                                         </li>
                                     <?php else: ?>
                                         <li class="page-item disabled">
-                                            <span class="page-link">Next</span>
+                                            <span class="page-link">Next <i class="zmdi zmdi-chevron-right"></i></span>
+                                        </li>
+                                    <?php endif; ?>
+                                    
+                                    <!-- Last Button -->
+                                    <?php if($pagination['current_page'] < $pagination['total_pages']): ?>
+                                        <li class="page-item">
+                                            <a class="page-link" href="<?php echo url('/admin/users?page=' . $pagination['total_pages'] . ($search ? '&q=' . urlencode($search) : '')); ?>" title="Last Page">
+                                                Last <i class="zmdi zmdi-skip-next"></i>
+                                            </a>
+                                        </li>
+                                    <?php else: ?>
+                                        <li class="page-item disabled">
+                                            <span class="page-link">Last <i class="zmdi zmdi-skip-next"></i></span>
                                         </li>
                                     <?php endif; ?>
                                 </ul>
+                                
+                                <!-- Go to Page Input -->
+                                <div class="pagination-goto mt-3 text-center">
+                                    <form method="GET" action="<?php echo url('/admin/users'); ?>" class="d-inline-flex align-items-center">
+                                        <?php if($search): ?>
+                                            <input type="hidden" name="q" value="<?php echo htmlspecialchars($search); ?>">
+                                        <?php endif; ?>
+                                        <span class="mr-2">Go to page:</span>
+                                        <input type="number" name="page" min="1" max="<?php echo $pagination['total_pages']; ?>" 
+                                               value="<?php echo $pagination['current_page']; ?>" 
+                                               class="form-control form-control-sm pagination-input mr-2" 
+                                               style="width: 80px;">
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">Go</button>
+                                        <span class="ml-2 text-muted">of <?php echo $pagination['total_pages']; ?></span>
+                                    </form>
+                                </div>
                                 
                                 <!-- Pagination Info -->
                                 <div class="pagination-info text-center mt-3">
