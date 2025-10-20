@@ -211,7 +211,7 @@
                 <div class="navbar-header">
                     <a href="javascript:void(0);" class="h-bars">☰</a>
                     <a class="navbar-brand" href="{{ url('/dashboard') }}">
-                        <img src="{{ asset('assets/common/img/rate-care-logo.fw.png') }}" alt="RateCare">
+                        <img src="{{ asset('common/img/rate-care-logo.fw.png') }}" alt="RateCare">
                     </a>
                 </div>
             </li>

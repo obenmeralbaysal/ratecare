@@ -222,7 +222,7 @@
 <div class="page-loader-wrapper" id="pageLoader">
     <div class="loader">
         <div class="m-t-30">
-            <img src="{{ asset('assets/common/img/rate-care-logo.fw.png') }}" width="48" alt="RateCare">
+            <img src="{{ asset('common/img/rate-care-logo.fw.png') }}" width="48" alt="RateCare">
         </div>
         <p>Please wait...</p>
     </div>
@@ -235,7 +235,7 @@
                 <div class="navbar-header">
                     <a href="javascript:void(0);" class="h-bars">☰</a>
                     <a class="navbar-brand" href="{{ url('/dashboard') }}">
-                        <img src="{{ asset('assets/common/img/rate-care-logo.fw.png') }}" alt="RateCare">
+                        <img src="{{ asset('common/img/rate-care-logo.fw.png') }}" alt="RateCare">
                     </a>
                 </div>
             </li>

@@ -49,8 +49,22 @@ class UsersController extends BaseController
      */
     public function store()
     {
-        // Handle user creation logic here
-        return $this->redirect('/admin/users')->with('success', 'User created successfully');
+        try {
+            // Validate input
+            $this->validate([
+                'namesurname' => 'required|min:2',
+                'email' => 'required|email',
+                'password' => 'required|min:6',
+                'password_confirmation' => 'required|same:password',
+                'userType' => 'required|in:0,1,2'
+            ]);
+            
+            // For demo purposes, just redirect with success
+            return $this->redirect('/admin/users')->with('success', 'User created successfully');
+            
+        } catch (\Exception $e) {
+            return $this->back()->with('error', $e->getMessage());
+        }
     }
     
     /**
@@ -58,8 +72,19 @@ class UsersController extends BaseController
      */
     public function sendInvite()
     {
-        // Handle user invitation logic here
-        return $this->redirect('/admin/users')->with('success', 'Invitation sent successfully');
+        try {
+            // Validate input
+            $this->validate([
+                'namesurname' => 'required|min:2',
+                'email' => 'required|email'
+            ]);
+            
+            // For demo purposes, just redirect with success
+            return $this->redirect('/admin/users')->with('success', 'Invitation sent successfully to ' . $this->input('email'));
+            
+        } catch (\Exception $e) {
+            return $this->back()->with('error', $e->getMessage());
+        }
     }
     
     /**

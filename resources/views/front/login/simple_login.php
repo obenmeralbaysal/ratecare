@@ -222,7 +222,7 @@
             <div class="row">
                 <div class="col-lg-6 col-md-12">
                     <div class="company_detail">
-                        <img src="{{ asset('assets/common/img/rate-care-logo.fw.png') }}" alt="RateCare Logo">
+                        <img src="{{ asset('common/img/rate-care-logo.fw.png') }}" alt="RateCare Logo">
                         <h3>The Ultimate Dashboard for Hoteliers</h3>
                         <p>In a rapidly changing and highly demanding business environment, the need to build and maintain strong synergies becomes a necessity.</p>
                         <div class="footer">
