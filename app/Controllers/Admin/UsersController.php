@@ -15,6 +15,18 @@ class UsersController extends BaseController
     public function __construct()
     {
         parent::__construct();
+        
+        // Initialize database connection
+        $db = \Core\Database::getInstance();
+        $db->connect([
+            'host' => env('DB_HOST', 'localhost'),
+            'port' => env('DB_PORT', 3306),
+            'database' => env('DB_DATABASE', 'hoteldigilab_new'),
+            'username' => env('DB_USERNAME', 'root'),
+            'password' => env('DB_PASSWORD', ''),
+            'charset' => env('DB_CHARSET', 'utf8mb4')
+        ]);
+        
         $this->userModel = new User();
     }
     
@@ -66,7 +78,7 @@ class UsersController extends BaseController
             
             $sql .= " ORDER BY u.created_at DESC LIMIT 50";
             
-            return $this->userModel->db->select($sql, $params);
+            return $this->userModel->raw($sql, $params);
             
         } catch (\Exception $e) {
             error_log("Users list error: " . $e->getMessage());
