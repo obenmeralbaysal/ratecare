@@ -29,7 +29,14 @@ $router->group(['middleware' => ['AuthMiddleware']], function($router) {
     $router->get('/admin/logs/clear', 'Admin\LogViewerController@clear');
 });
 
+// API Routes (Public - No authentication required)
+$router->group(['prefix' => 'api'], function($router) {
+    $router->get('/{widgetCode}', 'Api\ApiController@getRequest');
+    $router->post('/price', 'Api\ApiController@getPrice');
+});
+
 $router->get('/test', 'TestController@index');
+$router->get('/test/api', 'TestController@api');
 
 // Authentication routes
 $router->get('/login', 'Front\HomeController@login');
