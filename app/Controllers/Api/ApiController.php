@@ -770,7 +770,7 @@ class ApiController extends BaseController
             'Authorization: Basic ' . base64_encode("$username:$passwd"),
         ];
 
-        $ch = curl_init('https://fullconnect.otelz.com/detail/availability');
+        $ch = curl_init('https://fullconnect.otelz.com/v1/detail/availability');
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
         curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
