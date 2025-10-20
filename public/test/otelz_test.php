@@ -278,9 +278,9 @@ function testOtelZDetailAPI($facilityID, $currency, $startDate, $endDate)
         ],
         "lang" => "tr",
         //"currency" => $currency,
-        "price_formatter" => [
-            "decimal_digit_number" => 2,
-        ],
+        //"price_formatter" => [
+        //    "decimal_digit_number" => 2,
+       // ],
         "user_country" => "TR",
         //"device_type" => 1,
         //"request_type" => 1,
