@@ -407,11 +407,9 @@ class ApiController extends BaseController
     
     private function getHotelRunnerPrice($hotel, $currency, $checkIn, $checkOut)
     {
-        // Mock implementation - would call actual HotelRunner API
-        return [
-            'price' => rand(780, 1450) . ".00",
-            'url' => $hotel['hotelrunner_url']
-        ];
+        // HotelRunner returns "NA" in old system
+        $this->logMessage("HotelRunner: Not implemented - returning NA", 'INFO');
+        return "NA";
     }
     
     private function getBookingPrice($hotel, $currency, $checkIn, $checkOut)
@@ -446,14 +444,14 @@ class ApiController extends BaseController
     
     private function getHotelsPrice($hotel, $currency, $checkIn, $checkOut)
     {
-        // Mock implementation - would call Hotels.com API
-        return rand(820, 1550) . ".00";
+        // Hotels.com returns "NA" in old system
+        $this->logMessage("Hotels.com: Not implemented - returning NA", 'INFO');
+        return "NA";
     }
     
     private function getTatilSepetiPrice($hotel, $currency, $checkIn, $checkOut)
     {
-        // Mock implementation - would call TatilSepeti API
-        return rand(790, 1480) . ".00";
+        return $this->getTatilSepetiPriceReal($hotel['tatilsepeti_url'], $currency, $checkIn, $checkOut);
     }
     
     private function getOdamaxPrice($hotel, $currency, $checkIn, $checkOut)
@@ -463,8 +461,15 @@ class ApiController extends BaseController
     
     private function getOdamaxUrl($hotel, $currency, $checkIn, $checkOut)
     {
-        // Mock implementation - would generate Odamax URL
-        return $hotel['odamax_url'] . "?checkin=" . $checkIn . "&checkout=" . $checkOut;
+        $url = $hotel['odamax_url'];
+        $startDate = date("d.m.Y", strtotime($checkIn));
+        $endDate = date("d.m.Y", strtotime($checkOut));
+        
+        if (strpos($url, 'kucukoteller') !== false) {
+            return "{$url}&check_in={$startDate}&check_out={$endDate}&adult_1=2&type=HOTEL&currency={$currency}";
+        } else {
+            return "{$url}?check_in={$startDate}&check_out={$endDate}&adult_1=2&type=HOTEL&currency={$currency}";
+        }
     }
     
     private function getOtelzPrice($hotel, $currency, $checkIn, $checkOut)
@@ -474,17 +479,15 @@ class ApiController extends BaseController
     
     private function getOtelzUrl($hotel, $currency, $checkIn, $checkOut)
     {
-        // Mock implementation - would generate OtelZ URL
+        // OtelZ uses facility ID directly in API calls
         return "https://otelz.com/hotel/" . $hotel['otelz_url'];
     }
     
     private function getEtsturPrice($hotel, $currency, $checkIn, $checkOut)
     {
-        // Mock implementation - would call ETSTur API
-        return [
-            'price' => rand(770, 1420) . ".00",
-            'url' => "https://etstur.com/hotel/" . $hotel['etstur_hotel_id']
-        ];
+        // ETSTur not implemented in old system
+        $this->logMessage("ETSTur: Not implemented - returning NA", 'INFO');
+        return "NA";
     }
     
     /**
@@ -876,10 +879,84 @@ class ApiController extends BaseController
     }
     
     /**
+     * Get TatilSepeti price
+     */
+    private function getTatilSepetiPriceReal($url, $currency, $startDate, $endDate)
+    {
+        $this->logMessage("TatilSepeti API: Starting price request for URL {$url}, currency {$currency}, dates {$startDate} to {$endDate}", 'INFO');
+        
+        if (empty($url)) {
+            $this->logMessage("TatilSepeti: Empty URL provided", 'ERROR');
+            return "NA";
+        }
+        
+        try {
+            $checkIn = date("d.m.Y", strtotime($startDate));
+            $checkOut = date("d.m.Y", strtotime($endDate));
+            
+            $postData = "Search=oda%3A2%3Btarih%3A" . urlencode($checkIn) . "%2C" . urlencode($checkOut) . "%3Bclick%3Atrue";
+            
+            $headers = [
+                'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept: application/json, text/javascript, */*; q=0.01',
+                'Accept-Language: tr-TR,tr;q=0.9,en;q=0.8',
+                'Content-Type: application/x-www-form-urlencoded; charset=UTF-8',
+                'X-Requested-With: XMLHttpRequest',
+                'Origin: https://www.tatilsepeti.com',
+                'Referer: ' . $url
+            ];
+            
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+            curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            
+            $result = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if (!$result || $httpCode !== 200) {
+                $this->logMessage("TatilSepeti: HTTP error {$httpCode} or empty response", 'ERROR');
+                return "NA";
+            }
+            
+            // Search for price in response
+            $tryPrice = $this->search('<span class="Prices--Price">', '<small class=\'price-currency\'>', $result);
+            
+            if (!empty($tryPrice)) {
+                $price = str_replace(['.', ',', ' '], '', trim($tryPrice[0]));
+                $price = preg_replace('/[^0-9]/', '', $price);
+                
+                if (is_numeric($price) && $price > 0) {
+                    $finalPrice = $this->convertToTRY($price, $currency);
+                    $this->logMessage("TatilSepeti: Found price {$price} {$currency}, converted to {$finalPrice} TRY", 'INFO');
+                    return $finalPrice;
+                }
+            }
+            
+            $this->logMessage("TatilSepeti: No valid price found in response", 'WARNING');
+            return "NA";
+            
+        } catch (\Exception $e) {
+            $this->logMessage("TatilSepeti: Error - " . $e->getMessage(), 'ERROR');
+            return "NA";
+        }
+    }
+    
+    /**
      * Get Reseliva price via API
      */
     private function getReselivaPriceApi($hotelID, $currency, $startDate, $endDate)
     {
+        $this->logMessage("Reseliva API: Starting price request for hotel {$hotelID}, currency {$currency}, dates {$startDate} to {$endDate}", 'INFO');
+        
         $username = env('RESELIVA_USERNAME', 'uKucukOteller');
         $passwd = env('RESELIVA_PASSWORD', '138Rs!5g8SD');
 
@@ -911,21 +988,28 @@ class ApiController extends BaseController
         $response = curl_exec($ch);
         $decodedResponse = json_decode($response);
 
-        if ($decodedResponse && $decodedResponse->num_hotels > 0) {
+        if ($decodedResponse && isset($decodedResponse->num_hotels) && $decodedResponse->num_hotels > 0) {
             $roomTypes = $decodedResponse->hotels[0]->room_types;
             $prices = [];
 
             foreach ($roomTypes as $roomType) {
+                $price = round($roomType->final_price);
+                $convertedPrice = $this->convertToTRY($price, $currency);
+                
                 $prices[] = [
-                    "price" => round($roomType->final_price),
+                    "price" => $convertedPrice,
                     "url" => $roomType->url,
                 ];
             }
 
-            $minPrice = min($prices);
-            return $minPrice;
+            if (!empty($prices)) {
+                $minPriceData = min($prices);
+                $this->logMessage("Reseliva API: Found minimum price {$minPriceData['price']} TRY for hotel {$hotelID}", 'INFO');
+                return $minPriceData;
+            }
         }
 
+        $this->logMessage("Reseliva API: No hotels or prices found for hotel {$hotelID}", 'WARNING');
         return "NA";
     }
     
@@ -934,15 +1018,151 @@ class ApiController extends BaseController
      */
     private function getSabeeRoomsPrice($sabeeHotelId, $currency, $startdate, $enddate)
     {
-        // This would require SabeeClient integration
+        $this->logMessage("Sabee API: Starting price request for hotel {$sabeeHotelId}, currency {$currency}, dates {$startdate} to {$enddate}", 'INFO');
+        
         $sabeeApiKey = env('SABEE_API_KEY');
         if (!$sabeeApiKey) {
+            $this->logMessage("Sabee API: API key not configured", 'WARNING');
             return "NA";
         }
         
-        // TODO: Implement SabeeClient with $sabeeApiKey
-        // For now return mock data
-        return rand(800, 1500) . ".00";
+        try {
+            // Get room types for the hotel
+            $roomTypes = $this->getSabeeRooms($sabeeHotelId, $sabeeApiKey);
+            if (empty($roomTypes)) {
+                $this->logMessage("Sabee API: No room types found for hotel {$sabeeHotelId}", 'WARNING');
+                return "NA";
+            }
+            
+            // Prepare rooms array for availability request
+            $rooms = [];
+            foreach ($roomTypes as $roomType) {
+                $rooms[] = [
+                    "room_id" => $roomType->room_id,
+                    "guest_count" => ["adults" => 2]
+                ];
+            }
+            
+            // Request availability
+            $parameters = [
+                'hotel_id' => $sabeeHotelId,
+                'start_date' => $startdate,
+                'end_date' => $enddate,
+                'rooms' => $rooms,
+            ];
+            
+            $response = $this->sabeeRequest('booking/availability', $parameters, $sabeeApiKey);
+            
+            if ($response && isset($response->success) && $response->success && isset($response->data->room_rates)) {
+                $prices = [];
+                $pricesArray = array_column($response->data->room_rates, "prices");
+                
+                foreach ($pricesArray as $priceArray) {
+                    if ($priceArray != null) {
+                        foreach ($priceArray as $p) {
+                            if ($p->rateplan_id == 0) {
+                                continue;
+                            }
+                            $prices[] = $p;
+                        }
+                    }
+                }
+                
+                if (empty($prices)) {
+                    $this->logMessage("Sabee API: No valid prices found for hotel {$sabeeHotelId}", 'WARNING');
+                    return "NA";
+                }
+                
+                // Find minimum price
+                $priceColumn = array_column($prices, 'amount');
+                $minArray = $prices[array_search(min($priceColumn), $priceColumn)];
+                
+                $sabeeCurrency = $minArray->currency;
+                $price = $minArray->amount;
+                
+                $this->logMessage("Sabee API: Found price {$price} {$sabeeCurrency} for hotel {$sabeeHotelId}", 'INFO');
+                
+                // Convert to TRY
+                $finalPrice = $this->convertToTRY($price, $sabeeCurrency);
+                $this->logMessage("Sabee API: Final price after conversion - {$finalPrice} TRY", 'INFO');
+                
+                return $finalPrice;
+            } else {
+                $this->logMessage("Sabee API: Invalid response or no room rates for hotel {$sabeeHotelId}", 'WARNING');
+                return "NA";
+            }
+            
+        } catch (\Exception $e) {
+            $this->logMessage("Sabee API: Error - " . $e->getMessage(), 'ERROR');
+            return "NA";
+        }
+    }
+    
+    /**
+     * Get Sabee room types for hotel
+     */
+    private function getSabeeRooms($sabeeHotelId, $sabeeApiKey)
+    {
+        try {
+            $response = $this->sabeeRequest('hotel/inventory', [], $sabeeApiKey);
+            
+            if (!$response || !isset($response->success) || !$response->success) {
+                $this->logMessage("Sabee API: Failed to get hotel inventory", 'ERROR');
+                return [];
+            }
+            
+            $hotels = $response->data->hotels;
+            $hotelIndex = array_search($sabeeHotelId, array_column($hotels, 'hotel_id'));
+            
+            if ($hotelIndex === false) {
+                $this->logMessage("Sabee API: Hotel {$sabeeHotelId} not found in inventory", 'WARNING');
+                return [];
+            }
+            
+            return $hotels[$hotelIndex]->room_types;
+            
+        } catch (\Exception $e) {
+            $this->logMessage("Sabee API: Error getting rooms - " . $e->getMessage(), 'ERROR');
+            return [];
+        }
+    }
+    
+    /**
+     * Make Sabee API request
+     */
+    private function sabeeRequest($endpoint, $parameters, $sabeeApiKey)
+    {
+        try {
+            $headers = [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $sabeeApiKey,
+                'Accept: application/json'
+            ];
+            
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, "https://api.sabee.app/v1/{$endpoint}");
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($parameters));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if ($httpCode !== 200) {
+                $this->logMessage("Sabee API: HTTP error {$httpCode} for endpoint {$endpoint}", 'ERROR');
+                return null;
+            }
+            
+            return json_decode($response);
+            
+        } catch (\Exception $e) {
+            $this->logMessage("Sabee API: Request error - " . $e->getMessage(), 'ERROR');
+            return null;
+        }
     }
     
     /**
