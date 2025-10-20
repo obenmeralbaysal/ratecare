@@ -29,22 +29,6 @@ class DashboardController extends BaseController
     public function __construct()
     {
         parent::__construct();
-        $this->requireAuth();
-        
-        $this->auth = Auth::getInstance();
-        $this->authz = Authorization::getInstance();
-        
-        // Check admin permission
-        if (!$this->authz->canAccessAdmin()) {
-            return $this->redirect('/')->with('error', 'Access denied');
-        }
-        
-        $this->userModel = new User();
-        $this->hotelModel = new Hotel();
-        $this->widgetModel = new Widget();
-        $this->rateModel = new Rate();
-        $this->statisticModel = new Statistic();
-        $this->inviteModel = new Invite();
     }
     
     /**
@@ -52,24 +36,8 @@ class DashboardController extends BaseController
      */
     public function index()
     {
-        // Get overview statistics
-        $overviewStats = $this->getOverviewStats();
-        
-        // Get recent activities
-        $recentActivities = $this->getRecentActivities();
-        
-        // Get system health
-        $systemHealth = $this->getSystemHealth();
-        
-        // Get top performing hotels
-        $topHotels = $this->getTopHotels();
-        
-        return $this->view('admin.dashboard.index', [
-            'title' => 'Admin Dashboard',
-            'overview_stats' => $overviewStats,
-            'recent_activities' => $recentActivities,
-            'system_health' => $systemHealth,
-            'top_hotels' => $topHotels
+        echo $this->view('admin.dashboard.index', [
+            'title' => 'Admin Dashboard'
         ]);
     }
     

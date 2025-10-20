@@ -8,7 +8,7 @@
 
     <title>RateCare | The Ultimate Dashboard for Hoteliers</title>
     <!-- Favicon-->
-    <link rel="icon" type="image/png" href="{{ asset('assets/images/logo-goz.png') }}">
+    <link rel="icon" type="image/png" href="<?php echo htmlspecialchars(asset('assets/images/logo-goz.png') ?? ""); ?>">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
     <link href="https://fonts.googleapis.com/css?family=Muli:300,400,600,700" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/material-design-iconic-font/2.2.0/css/material-design-iconic-font.min.css" rel="stylesheet">
@@ -222,7 +222,7 @@
             <div class="row">
                 <div class="col-lg-6 col-md-12">
                     <div class="company_detail">
-                        <img src="{{ asset('assets/common/img/rate-care-logo.fw.png') }}" alt="RateCare Logo">
+                        <img src="<?php echo htmlspecialchars(asset('assets/common/img/rate-care-logo.fw.png') ?? ""); ?>" alt="RateCare Logo">
                         <h3>The Ultimate Dashboard for Hoteliers</h3>
                         <p>In a rapidly changing and highly demanding business environment, the need to build and maintain strong synergies becomes a necessity.</p>
                         <div class="footer">
@@ -239,15 +239,15 @@
                             <h5>Log in</h5>
                         </div>
                         
-                        {!! flash('error') ? '<div class="alert alert-danger">' . flash('error') . '</div>' : '' !!}
-                        {!! flash('success') ? '<div class="alert alert-success">' . flash('success') . '</div>' : '' !!}
+                        <?php echo flash('error') ? '<div class="alert alert-danger">' . flash('error') . '</div>' : ''; ?>
+                        <?php echo flash('success') ? '<div class="alert alert-success">' . flash('success') . '</div>' : ''; ?>
                         
-                        <form class="form" method="POST" action="{{ url('/login') }}" id="loginForm">
-                            {!! csrfField() !!}
+                        <form class="form" method="POST" action="<?php echo htmlspecialchars(url('/login') ?? ""); ?>" id="loginForm">
+                            <?php echo csrfField(); ?>
                             
                             <div class="input-group">
                                 <input type="email" class="form-control" name="email" placeholder="E-mail" 
-                                       value="{{ old('email') }}" required autofocus>
+                                       value="<?php echo htmlspecialchars(old('email') ?? ""); ?>" required autofocus>
                                 <span class="input-group-addon"><i class="zmdi zmdi-account-circle"></i></span>
                             </div>
                             
@@ -267,7 +267,7 @@
                             </div>
                         </form>
                         
-                        <a href="{{ url('/forgot-password') }}" class="link">Forgot Password?</a>
+                        <a href="<?php echo htmlspecialchars(url('/forgot-password') ?? ""); ?>" class="link">Forgot Password?</a>
                     </div>
                 </div>
             </div>

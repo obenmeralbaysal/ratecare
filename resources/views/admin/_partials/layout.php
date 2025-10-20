@@ -294,6 +294,7 @@
 </div>
 
 <section class="content home">
+    <!-- Dashboard content will be inserted here -->
     <div class="container">
         <div class="row clearfix">
             <div class="col-lg-4 col-md-6 col-sm-12 text-center">
