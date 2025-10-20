@@ -638,14 +638,25 @@ class ApiController extends BaseController
      */
     private function getOtelZPriceReal($otelzUrl, $currency, $startDate, $endDate)
     {
-        if (!ctype_digit($otelzUrl)) {
+        // Check if otelzUrl is numeric
+        if (!is_numeric($otelzUrl)) {
+            error_log("OtelZ API: Invalid facility ID - " . $otelzUrl);
             return "NA";
         }
 
-        $facilityID = $otelzUrl;
+        $facilityID = (int)$otelzUrl;
+        $username = env('OTELZ_USERNAME', 'kucukoteller');
+        $passwd = env('OTELZ_PASSWORD', '4;q)Dx9#');
+        
+        // Check credentials
+        if (!$username || !$passwd) {
+            error_log("OtelZ API: Missing credentials");
+            return "NA";
+        }
+
         $data = [
             "api_version" => "1.0.0",
-            "partner_id" => env('OTELZ_PARTNER_ID', 1316),
+            "partner_id" => (int)env('OTELZ_PARTNER_ID', 1316),
             "facility_reference" => $facilityID,
             "start_date" => $startDate,
             "end_date" => $endDate,
@@ -660,11 +671,8 @@ class ApiController extends BaseController
         ];
 
         $json = json_encode($data);
-        $username = env('OTELZ_USERNAME', 'kucukoteller');
-        $passwd = env('OTELZ_PASSWORD', '4;q)Dx9#');
-
         $headers = [
-            'Content-Type:application/json',
+            'Content-Type: application/json',
             'Authorization: Basic ' . base64_encode("$username:$passwd"),
         ];
 
@@ -674,21 +682,55 @@ class ApiController extends BaseController
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
-        $result = json_decode(curl_exec($ch));
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
 
-        if (isset($result->errors)) {
+        // Check for cURL errors
+        if ($curlError) {
+            error_log("OtelZ API cURL error: " . $curlError);
             return "NA";
         }
 
-        if ($result && $result->detail_result) {
-            if ($result->detail_result->min_price->total_room == 0) {
-                return "NA";
-            }
-            $price = $result->detail_result->min_price->net_total->amount;
-            return round($price);
+        // Check HTTP status
+        if ($httpCode !== 200) {
+            error_log("OtelZ API HTTP error: " . $httpCode . " - Response: " . substr($response, 0, 200));
+            return "NA";
         }
 
+        $result = json_decode($response);
+        
+        // Check JSON decode error
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log("OtelZ API JSON decode error: " . json_last_error_msg());
+            return "NA";
+        }
+
+        // Check for API errors
+        if (isset($result->errors)) {
+            error_log("OtelZ API errors: " . json_encode($result->errors));
+            return "NA";
+        }
+
+        // Check result structure
+        if ($result && isset($result->detail_result)) {
+            if (isset($result->detail_result->min_price) && 
+                isset($result->detail_result->min_price->total_room) &&
+                $result->detail_result->min_price->total_room == 0) {
+                return "NA";
+            }
+            
+            if (isset($result->detail_result->min_price->net_total->amount)) {
+                $price = $result->detail_result->min_price->net_total->amount;
+                return round($price);
+            }
+        }
+
+        error_log("OtelZ API: Unexpected response structure - " . substr($response, 0, 200));
         return "NA";
     }
     
