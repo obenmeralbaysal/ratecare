@@ -81,13 +81,17 @@ class ErrorHandler
     
     public static function log($level, $message, $context = [])
     {
-        $timestamp = date('Y-m-d H:i:s');
-        $logFile = self::$logPath . date('Y-m-d') . '.log';
-        
-        $contextString = !empty($context) ? ' ' . json_encode($context) : '';
-        $logEntry = "[{$timestamp}] {$level}: {$message}{$contextString}" . PHP_EOL;
-        
-        file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+        try {
+            $timestamp = date('Y-m-d H:i:s');
+            $logFile = self::$logPath . date('Y-m-d') . '.log';
+            
+            $contextString = !empty($context) ? ' ' . json_encode($context) : '';
+            $logEntry = "[{$timestamp}] {$level}: {$message}{$contextString}" . PHP_EOL;
+            
+            file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+        } catch (\Exception $e) {
+            // If logging fails, silently continue to avoid infinite loops
+        }
     }
     
     private static function getErrorType($severity)
