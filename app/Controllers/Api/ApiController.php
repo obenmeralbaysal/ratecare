@@ -44,6 +44,9 @@ class ApiController extends BaseController
     public function getRequest($widgetCode)
     {
         try {
+            // Log API request
+            $this->logMessage("API Request started for widget: " . $widgetCode, 'INFO');
+            
             // Get request parameters
             $currency = $this->input('currency', 'TRY');
             $checkin = $this->input('checkin', date('Y-m-d'));
@@ -52,6 +55,8 @@ class ApiController extends BaseController
             $child = (int)$this->input('child', 0);
             $infant = (int)$this->input('infant', 0);
             
+            $this->logMessage("API Parameters - Currency: {$currency}, CheckIn: {$checkin}, CheckOut: {$checkout}", 'INFO');
+            
             // Format dates
             $checkIn = date("Y-m-d", strtotime(str_replace('/', '-', $checkin)));
             $checkOut = date("Y-m-d", strtotime(str_replace('/', '-', $checkout)));
@@ -59,19 +64,25 @@ class ApiController extends BaseController
             // Find widget and hotel
             $widget = $this->getWidgetByCode($widgetCode);
             if (!$widget) {
+                $this->logMessage("Widget not found: " . $widgetCode, 'ERROR');
                 return $this->jsonResponse([
                     'status' => 'error',
                     'message' => 'Widget not found'
                 ], 404);
             }
             
+            $this->logMessage("Widget found: " . $widgetCode . " for hotel ID: " . $widget['hotel_id'], 'INFO');
+            
             $hotel = $this->getHotelById($widget['hotel_id']);
             if (!$hotel) {
+                $this->logMessage("Hotel not found for ID: " . $widget['hotel_id'], 'ERROR');
                 return $this->jsonResponse([
                     'status' => 'error',
                     'message' => 'Hotel not found'
                 ], 404);
             }
+            
+            $this->logMessage("Hotel found: " . $hotel['name'] . " (ID: " . $hotel['id'] . ")", 'INFO');
             
             // Initialize response
             $response = [
@@ -104,7 +115,7 @@ class ApiController extends BaseController
             
         } catch (\Exception $e) {
             // Log error without sensitive data
-            error_log("API getRequest error for widget: " . $widgetCode . " - " . $e->getMessage());
+            $this->logMessage("API getRequest error for widget: " . $widgetCode . " - " . $e->getMessage(), 'ERROR');
             return $this->jsonResponse([
                 'status' => 'error',
                 'message' => 'Internal server error'
@@ -660,7 +671,7 @@ class ApiController extends BaseController
     {
         // Check if otelzUrl is numeric
         if (!is_numeric($otelzUrl)) {
-            error_log("OtelZ API: Invalid facility ID - " . $otelzUrl);
+            $this->logMessage("OtelZ API: Invalid facility ID - " . $otelzUrl, 'ERROR');
             return "NA";
         }
 
@@ -670,7 +681,7 @@ class ApiController extends BaseController
         
         // Check credentials
         if (!$username || !$passwd) {
-            error_log("OtelZ API: Missing credentials");
+            $this->logMessage("OtelZ API: Missing credentials", 'ERROR');
             return "NA";
         }
 
@@ -712,13 +723,13 @@ class ApiController extends BaseController
 
         // Check for cURL errors
         if ($curlError) {
-            error_log("OtelZ API cURL error: " . $curlError);
+            $this->logMessage("OtelZ API cURL error: " . $curlError, 'ERROR');
             return "NA";
         }
 
         // Check HTTP status
         if ($httpCode !== 200) {
-            error_log("OtelZ API HTTP error: " . $httpCode . " - Response: " . substr($response, 0, 200));
+            $this->logMessage("OtelZ API HTTP error: " . $httpCode . " - Response: " . substr($response, 0, 200), 'ERROR');
             return "NA";
         }
 
@@ -726,13 +737,13 @@ class ApiController extends BaseController
         
         // Check JSON decode error
         if (json_last_error() !== JSON_ERROR_NONE) {
-            error_log("OtelZ API JSON decode error: " . json_last_error_msg());
+            $this->logMessage("OtelZ API JSON decode error: " . json_last_error_msg(), 'ERROR');
             return "NA";
         }
 
         // Check for API errors
         if (isset($result->errors)) {
-            error_log("OtelZ API errors: " . json_encode($result->errors));
+            $this->logMessage("OtelZ API errors: " . json_encode($result->errors), 'ERROR');
             return "NA";
         }
 
@@ -750,7 +761,7 @@ class ApiController extends BaseController
             }
         }
 
-        error_log("OtelZ API: Unexpected response structure - " . substr($response, 0, 200));
+        $this->logMessage("OtelZ API: Unexpected response structure - " . substr($response, 0, 200), 'ERROR');
         return "NA";
     }
     
