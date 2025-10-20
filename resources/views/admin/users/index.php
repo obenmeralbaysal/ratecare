@@ -20,10 +20,12 @@
         }
         
         .navbar {
-            background: #2c2c2c;
+            background: #ffffff;
             border: none;
+            border-bottom: 1px solid #dee2e6;
             padding: 0;
             min-height: 60px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
         .navbar .container {
@@ -31,6 +33,11 @@
             align-items: center;
             justify-content: space-between;
             height: 60px;
+        }
+        
+        .navbar-brand {
+            display: flex;
+            align-items: center;
         }
         
         .navbar-brand img {
@@ -47,15 +54,18 @@
         }
         
         .navbar .nav li a {
-            color: #fff;
+            color: #333;
             text-decoration: none;
             padding: 15px;
             display: flex;
             align-items: center;
+            border-radius: 4px;
+            transition: all 0.3s ease;
         }
         
         .navbar .nav li a:hover {
-            background: rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.05);
+            color: #007bff;
         }
         
         .menu-container {
@@ -388,31 +398,55 @@
             color: #333;
             font-weight: 500;
         }
+        
+        /* Logout button styles */
+        .navbar-nav {
+            display: flex;
+            align-items: center;
+        }
+        
+        .logout-btn {
+            color: #333;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            font-weight: 500;
+        }
+        
+        .logout-btn:hover {
+            background: #dc3545;
+            color: #fff;
+            text-decoration: none;
+        }
+        
+        .logout-btn i {
+            font-size: 16px;
+        }
+        
+        .ml-1 {
+            margin-left: 0.25rem;
+        }
     </style>
 </head>
 <body class="theme-black">
 
 <nav class="navbar">
     <div class="container">
-        <ul class="nav navbar-nav">
-            <li>
-                <div class="navbar-header">
-                    <a href="javascript:void(0);" class="h-bars">☰</a>
-                    <a class="navbar-brand" href="<?php echo url('/dashboard'); ?>">
-                        <img src="<?php echo asset('common/img/rate-care-logo.fw.png'); ?>" alt="RateCare">
-                    </a>
-                </div>
-            </li>
-            
-            <li class="float-right">
-                <a href="javascript:void(0);" class="js-right-sidebar">
-                    <i class="zmdi zmdi-settings"></i>
-                </a>
-                <a href="<?php echo url('/logout'); ?>" class="mega-menu">
-                    <i class="zmdi zmdi-power"></i>
-                </a>
-            </li>
-        </ul>
+        <!-- Logo - Sol taraf -->
+        <a class="navbar-brand" href="<?php echo url('/dashboard'); ?>">
+            <img src="<?php echo asset('common/img/rate-care-logo.fw.png'); ?>" alt="RateCare">
+        </a>
+        
+        <!-- Çıkış butonu - Sağ taraf -->
+        <div class="navbar-nav">
+            <a href="<?php echo url('/logout'); ?>" class="nav-link logout-btn">
+                <i class="zmdi zmdi-power"></i>
+                <span class="ml-1">Logout</span>
+            </a>
+        </div>
     </div>
 </nav>
 
