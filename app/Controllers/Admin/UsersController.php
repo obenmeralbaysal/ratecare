@@ -17,15 +17,32 @@ class UsersController extends BaseController
         parent::__construct();
         
         // Initialize database connection
-        $db = \Core\Database::getInstance();
-        $db->connect([
-            'host' => 'localhost',
-            'port' => 3306,
-            'database' => 'hoteldigilab_new',
-            'username' => 'root',
-            'password' => '',
-            'charset' => 'utf8mb4'
-        ]);
+        try {
+            $db = \Core\Database::getInstance();
+            
+            $config = [
+                'host' => env('DB_HOST', 'localhost'),
+                'port' => env('DB_PORT', 3306),
+                'database' => env('DB_DATABASE', 'hoteldigilab_new'),
+                'username' => env('DB_USERNAME', 'root'),
+                'password' => env('DB_PASSWORD', ''),
+                'charset' => env('DB_CHARSET', 'utf8mb4')
+            ];
+            
+            // Log database config for debugging (without password)
+            error_log("DB Config: " . json_encode([
+                'host' => $config['host'],
+                'database' => $config['database'],
+                'username' => $config['username'],
+                'password_length' => strlen($config['password'])
+            ]));
+            
+            $db->connect($config);
+            
+        } catch (\Exception $e) {
+            error_log("Database connection error: " . $e->getMessage());
+            // Continue without database for now
+        }
         
         $this->userModel = new User();
     }
