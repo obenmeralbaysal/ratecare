@@ -470,6 +470,26 @@ class ApiController extends BaseController
     // ===== HELPER FUNCTIONS FROM OLD SYSTEM =====
     
     /**
+     * Custom log function
+     */
+    private function logMessage($message, $level = 'INFO')
+    {
+        $logDir = __DIR__ . '/../../storage/logs';
+        if (!is_dir($logDir)) {
+            mkdir($logDir, 0777, true);
+        }
+        
+        $logFile = $logDir . '/app.log';
+        $timestamp = date('Y-m-d H:i:s');
+        $logEntry = "[{$timestamp}] [{$level}] {$message}" . PHP_EOL;
+        
+        file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+        
+        // Also use error_log as fallback
+        error_log($message);
+    }
+    
+    /**
      * Validate API credentials
      */
     private function validateApiCredentials()
@@ -482,7 +502,7 @@ class ApiController extends BaseController
         if (!env('OTELZ_PASSWORD')) $missing[] = 'OTELZ_PASSWORD';
         
         if (!empty($missing)) {
-            error_log("Missing API credentials: " . implode(', ', $missing));
+            $this->logMessage("Missing API credentials: " . implode(', ', $missing), 'ERROR');
         }
         
         return empty($missing);
