@@ -200,6 +200,43 @@
             background: #007bff;
             border-color: #007bff;
         }
+        
+        .badge {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 4px 8px;
+            border-radius: 12px;
+        }
+        
+        .badge-danger {
+            background: #dc3545;
+            color: #fff;
+        }
+        
+        .badge-warning {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .badge-info {
+            background: #17a2b8;
+            color: #fff;
+        }
+        
+        .badge-secondary {
+            background: #6c757d;
+            color: #fff;
+        }
+        
+        .py-4 {
+            padding: 2rem 0;
+        }
+        
+        .mb-2 {
+            margin-bottom: 0.5rem;
+        }
     </style>
 </head>
 <body class="theme-black">
@@ -281,9 +318,9 @@
 
                 <div class="card">
                     <div class="body">
-                        <form method="GET" action="" accept-charset="UTF-8" id="filter-form" class="input-group">
-                            <input class="form-control filter-text" name="q" value="{{ request('q') }}"
-                                   placeholder="Enter text to search by name">
+                        <form method="GET" action="{{ url('/admin/users') }}" accept-charset="UTF-8" id="filter-form" class="input-group">
+                            <input class="form-control filter-text" name="q" value="{{ $search }}"
+                                   placeholder="Enter text to search by name or email">
                             <div class="input-group-append">
                                 <button type="submit" name="filter" value="1"
                                         class="btn btn-primary btn-round waves-effect filter-submit-btn">
@@ -309,85 +346,61 @@
                             </tr>
                             </thead>
                             <tbody>
-                                <!-- Sample data for demo -->
-                                <tr>
-                                    <th scope="row">1</th>
-                                    <td class="td-namesurname">
-                                        <a href="#">Test Admin</a>
-                                    </td>
-                                    <td>
-                                        <a href="#" target="_blank">Sample Hotel</a>
-                                    </td>
-                                    <td>admin@ratecare.net</td>
-                                    <td class="text-center">ADMIN ACCOUNT</td>
-                                    <td class="text-nowrap">Oct 20, 2025</td>
-                                    <td class="text-nowrap text-right">
-                                        <a href="#" title="EDIT PROPERTY">
-                                            <button class="btn btn-warning btn-sm"><i class="zmdi zmdi-city-alt"></i></button>
-                                        </a>
-                                        <a href="#" title="EDIT WIDGET">
-                                            <button class="btn btn-warning btn-sm"><i class="zmdi zmdi-layers"></i></button>
-                                        </a>
-                                        <a href="#" title="EDIT USER">
-                                            <button class="btn btn-warning btn-sm"><i class="zmdi zmdi-edit"></i></button>
-                                        </a>
-                                        <a href="#" onclick="return confirm('Are you sure?')" title="DELETE USER">
-                                            <span class="btn btn-danger btn-sm"><i class="zmdi zmdi-delete"></i></span>
-                                        </a>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th scope="row">2</th>
-                                    <td class="td-namesurname">
-                                        <a href="#">Sample Reseller</a>
-                                    </td>
-                                    <td>
-                                        <a href="#" target="_blank">Reseller Hotel</a>
-                                    </td>
-                                    <td>reseller@example.com</td>
-                                    <td class="text-center">RESELLER ACCOUNT</td>
-                                    <td class="text-nowrap">Oct 19, 2025</td>
-                                    <td class="text-nowrap text-right">
-                                        <a href="#" title="EDIT PROPERTY">
-                                            <button class="btn btn-warning btn-sm"><i class="zmdi zmdi-city-alt"></i></button>
-                                        </a>
-                                        <a href="#" title="EDIT WIDGET">
-                                            <button class="btn btn-warning btn-sm"><i class="zmdi zmdi-layers"></i></button>
-                                        </a>
-                                        <a href="#" title="EDIT USER">
-                                            <button class="btn btn-warning btn-sm"><i class="zmdi zmdi-edit"></i></button>
-                                        </a>
-                                        <a href="#" onclick="return confirm('Are you sure?')" title="DELETE USER">
-                                            <span class="btn btn-danger btn-sm"><i class="zmdi zmdi-delete"></i></span>
-                                        </a>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th scope="row">3</th>
-                                    <td class="td-namesurname">
-                                        <a href="#">Customer User</a>
-                                    </td>
-                                    <td>
-                                        <a href="#" target="_blank">Customer Hotel</a>
-                                    </td>
-                                    <td>customer@example.com</td>
-                                    <td class="text-center">Sample Reseller</td>
-                                    <td class="text-nowrap">Oct 18, 2025</td>
-                                    <td class="text-nowrap text-right">
-                                        <a href="#" title="EDIT PROPERTY">
-                                            <button class="btn btn-warning btn-sm"><i class="zmdi zmdi-city-alt"></i></button>
-                                        </a>
-                                        <a href="#" title="EDIT WIDGET">
-                                            <button class="btn btn-warning btn-sm"><i class="zmdi zmdi-layers"></i></button>
-                                        </a>
-                                        <a href="#" title="EDIT USER">
-                                            <button class="btn btn-warning btn-sm"><i class="zmdi zmdi-edit"></i></button>
-                                        </a>
-                                        <a href="#" onclick="return confirm('Are you sure?')" title="DELETE USER">
-                                            <span class="btn btn-danger btn-sm"><i class="zmdi zmdi-delete"></i></span>
-                                        </a>
-                                    </td>
-                                </tr>
+                                @if(empty($users))
+                                    <tr>
+                                        <td colspan="7" class="text-center">
+                                            <div class="py-4">
+                                                <i class="zmdi zmdi-account-o zmdi-hc-2x text-muted mb-2"></i>
+                                                <p class="text-muted">No users found</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @else
+                                    @foreach($users as $user)
+                                        <tr>
+                                            <th scope="row">{{ $user['id'] }}</th>
+                                            <td class="td-namesurname">
+                                                <a href="{{ url('/admin/users/edit/' . $user['id']) }}">
+                                                    {{ $user['namesurname'] }}
+                                                </a>
+                                            </td>
+                                            <td>
+                                                <!-- Hotel info will be added later -->
+                                                <span class="text-muted">-</span>
+                                            </td>
+                                            <td>{{ $user['email'] }}</td>
+                                            <td class="text-center">
+                                                @if($user['is_admin'])
+                                                    <span class="badge badge-danger">ADMIN</span>
+                                                @elseif($user['user_type'] == 2)
+                                                    <span class="badge badge-warning">RESELLER</span>
+                                                @elseif($user['reseller_id'] > 0)
+                                                    <span class="badge badge-info">CUSTOMER</span>
+                                                    @if($user['reseller_name'])
+                                                        <br><small class="text-muted">{{ $user['reseller_name'] }}</small>
+                                                    @endif
+                                                @else
+                                                    <span class="badge badge-secondary">STANDARD</span>
+                                                @endif
+                                            </td>
+                                            <td class="text-nowrap">{{ formatDate($user['created_at'], 'M d, Y') }}</td>
+                                            <td class="text-nowrap text-right">
+                                                <a href="{{ url('/admin/users/switch/' . $user['id'] . '?redirect=hotels') }}" title="EDIT PROPERTY">
+                                                    <button class="btn btn-warning btn-sm"><i class="zmdi zmdi-city-alt"></i></button>
+                                                </a>
+                                                <a href="{{ url('/admin/users/switch/' . $user['id'] . '?redirect=widgets') }}" title="EDIT WIDGET">
+                                                    <button class="btn btn-warning btn-sm"><i class="zmdi zmdi-layers"></i></button>
+                                                </a>
+                                                <a href="{{ url('/admin/users/edit/' . $user['id']) }}" title="EDIT USER">
+                                                    <button class="btn btn-warning btn-sm"><i class="zmdi zmdi-edit"></i></button>
+                                                </a>
+                                                <a href="{{ url('/admin/users/delete/' . $user['id']) }}" onclick="return confirm('Are you sure?')" title="DELETE USER">
+                                                    <span class="btn btn-danger btn-sm"><i class="zmdi zmdi-delete"></i></span>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                @endif
                             </tbody>
                         </table>
 

@@ -3,15 +3,19 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Models\User;
 
 /**
  * Admin Users Controller
  */
 class UsersController extends BaseController
 {
+    private $userModel;
+    
     public function __construct()
     {
         parent::__construct();
+        $this->userModel = new User();
     }
     
     /**
@@ -19,9 +23,55 @@ class UsersController extends BaseController
      */
     public function index()
     {
+        // Get search query
+        $search = $this->input('q', '');
+        
+        // Get users with pagination
+        $users = $this->getUsersList($search);
+        
         echo $this->view('admin.users.index', [
-            'title' => 'Users Management'
+            'title' => 'Users Management',
+            'users' => $users,
+            'search' => $search
         ]);
+    }
+    
+    /**
+     * Get users list with search and pagination
+     */
+    private function getUsersList($search = '')
+    {
+        try {
+            $sql = "SELECT 
+                        u.id,
+                        u.namesurname,
+                        u.email,
+                        u.is_admin,
+                        u.user_type,
+                        u.reseller_id,
+                        u.created_at,
+                        u.is_rate_comparison_active,
+                        r.namesurname as reseller_name
+                    FROM users u
+                    LEFT JOIN users r ON u.reseller_id = r.id
+                    WHERE 1=1";
+            
+            $params = [];
+            
+            if (!empty($search)) {
+                $sql .= " AND (u.namesurname LIKE ? OR u.email LIKE ?)";
+                $params[] = "%{$search}%";
+                $params[] = "%{$search}%";
+            }
+            
+            $sql .= " ORDER BY u.created_at DESC LIMIT 50";
+            
+            return $this->userModel->db->select($sql, $params);
+            
+        } catch (\Exception $e) {
+            error_log("Users list error: " . $e->getMessage());
+            return [];
+        }
     }
     
     /**
