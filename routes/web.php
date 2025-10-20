@@ -22,6 +22,11 @@ $router->group(['middleware' => ['AuthMiddleware']], function($router) {
     // Admin Hotels
     $router->get('/admin/users/switch/{id}', 'Admin\HotelsController@edit');
     $router->post('/admin/hotels/update/{id}', 'Admin\HotelsController@update');
+    
+    // Admin Logs
+    $router->get('/admin/logs', 'Admin\LogViewerController@index');
+    $router->get('/admin/logs/download', 'Admin\LogViewerController@download');
+    $router->get('/admin/logs/clear', 'Admin\LogViewerController@clear');
 });
 
 $router->get('/test', 'TestController@index');

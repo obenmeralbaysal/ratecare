@@ -464,6 +464,9 @@
                         <a href="javascript:void(0)">Users</a>
                     </li>
                     <li>
+                        <a href="<?php echo url('/admin/logs'); ?>">Logs</a>
+                    </li>
+                    <li>
                         <a href="<?php echo url('/admin/settings'); ?>">Settings</a>
                     </li>
                 </ul>
