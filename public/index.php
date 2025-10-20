@@ -26,6 +26,9 @@ $autoloader->register();
 \Core\Config::load('app');
 \Core\Config::load('database');
 
+// Load helper functions
+require_once APP_ROOT . '/app/Helpers/functions.php';
+
 // Register error handler
 \Core\ErrorHandler::register(APP_ROOT . '/storage/logs/');
 

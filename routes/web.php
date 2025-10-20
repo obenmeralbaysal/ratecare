@@ -4,11 +4,14 @@ use Core\Router;
 
 $router = Router::getInstance();
 
-// Basic routes for testing
-$router->get('/', function() {
-    echo "<h1>Hotel DigiLab V2</h1>";
-    echo "<p>Framework-less MVC Application is working!</p>";
-    echo "<p>Time: " . date('Y-m-d H:i:s') . "</p>";
+// Protected home route - requires authentication
+$router->group(['middleware' => ['AuthMiddleware']], function($router) {
+    $router->get('/', function() {
+        echo "<h1>Hotel DigiLab V2</h1>";
+        echo "<p>Framework-less MVC Application is working!</p>";
+        echo "<p>Time: " . date('Y-m-d H:i:s') . "</p>";
+        echo "<p>Welcome, you are logged in!</p>";
+    });
 });
 
 $router->get('/test', 'TestController@index');

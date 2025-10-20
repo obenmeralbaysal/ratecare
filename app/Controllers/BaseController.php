@@ -52,7 +52,17 @@ abstract class BaseController
      */
     protected function back()
     {
-        return $this->response->back();
+        $referer = $_SERVER['HTTP_REFERER'] ?? '/';
+        return $this->response->redirect($referer);
+    }
+    
+    /**
+     * Redirect with flash message
+     */
+    protected function with($key, $value)
+    {
+        setFlash($key, $value);
+        return $this;
     }
     
     /**

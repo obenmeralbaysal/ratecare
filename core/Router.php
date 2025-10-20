@@ -193,7 +193,7 @@ class Router
             list($controller, $method) = explode('@', $action);
             
             // Add namespace if not present
-            if (strpos($controller, '\\') === false) {
+            if (strpos($controller, 'App\\Controllers\\') !== 0) {
                 $controller = "App\\Controllers\\{$controller}";
             }
             

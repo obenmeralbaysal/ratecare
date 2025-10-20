@@ -1,0 +1,29 @@
+[2025-10-20 11:19:01] error: [NOTICE] session_start(): Ignoring session_start() because a session is already active (started from /Applications/XAMPP/xamppfiles/htdocs/ratecare/core/Session.php on line 37) in /Applications/XAMPP/xamppfiles/htdocs/ratecare/app/Middleware/AuthMiddleware.php on line 14
+[2025-10-20 11:19:26] error: [EXCEPTION] Controller Front\HomeController not found in /Applications/XAMPP/xamppfiles/htdocs/ratecare/core/Router.php on line 209
+Stack trace:
+#0 /Applications/XAMPP/xamppfiles/htdocs/ratecare/core/Router.php(138): Core\Router->callAction(Array)
+#1 /Applications/XAMPP/xamppfiles/htdocs/ratecare/core/Application.php(73): Core\Router->dispatch('GET', '/login')
+#2 /Applications/XAMPP/xamppfiles/htdocs/ratecare/public/index.php(41): Core\Application->run()
+#3 {main}
+[2025-10-20 11:20:00] error: [EXCEPTION] syntax error, unexpected token "else" in /Applications/XAMPP/xamppfiles/htdocs/ratecare/core/View.php on line 116
+Stack trace:
+#0 /Applications/XAMPP/xamppfiles/htdocs/ratecare/core/Autoloader.php(85): Core\Autoloader->requireFile('/Applications/X...')
+#1 /Applications/XAMPP/xamppfiles/htdocs/ratecare/core/Autoloader.php(54): Core\Autoloader->loadMappedFile('Core\\', 'View')
+#2 /Applications/XAMPP/xamppfiles/htdocs/ratecare/app/Controllers/BaseController.php(23): Core\Autoloader->loadClass('Core\\View')
+#3 /Applications/XAMPP/xamppfiles/htdocs/ratecare/app/Controllers/Front/HomeController.php(20): App\Controllers\BaseController->__construct()
+#4 /Applications/XAMPP/xamppfiles/htdocs/ratecare/core/Router.php(201): App\Controllers\Front\HomeController->__construct()
+#5 /Applications/XAMPP/xamppfiles/htdocs/ratecare/core/Router.php(138): Core\Router->callAction(Array)
+#6 /Applications/XAMPP/xamppfiles/htdocs/ratecare/core/Application.php(73): Core\Router->dispatch('GET', '/login')
+#7 /Applications/XAMPP/xamppfiles/htdocs/ratecare/public/index.php(41): Core\Application->run()
+#8 {main}
+[2025-10-20 11:23:57] error: [EXCEPTION] syntax error, unexpected token "else" in /Applications/XAMPP/xamppfiles/htdocs/ratecare/core/View.php on line 116
+Stack trace:
+#0 /Applications/XAMPP/xamppfiles/htdocs/ratecare/core/Autoloader.php(85): Core\Autoloader->requireFile('/Applications/X...')
+#1 /Applications/XAMPP/xamppfiles/htdocs/ratecare/core/Autoloader.php(54): Core\Autoloader->loadMappedFile('Core\\', 'View')
+#2 /Applications/XAMPP/xamppfiles/htdocs/ratecare/app/Controllers/BaseController.php(23): Core\Autoloader->loadClass('Core\\View')
+#3 /Applications/XAMPP/xamppfiles/htdocs/ratecare/app/Controllers/Front/HomeController.php(20): App\Controllers\BaseController->__construct()
+#4 /Applications/XAMPP/xamppfiles/htdocs/ratecare/core/Router.php(201): App\Controllers\Front\HomeController->__construct()
+#5 /Applications/XAMPP/xamppfiles/htdocs/ratecare/core/Router.php(138): Core\Router->callAction(Array)
+#6 /Applications/XAMPP/xamppfiles/htdocs/ratecare/core/Application.php(73): Core\Router->dispatch('GET', '/login')
+#7 /Applications/XAMPP/xamppfiles/htdocs/ratecare/public/index.php(41): Core\Application->run()
+#8 {main}

@@ -11,8 +11,7 @@ class AuthMiddleware extends BaseMiddleware
 {
     public function handle()
     {
-        session_start();
-        
+        // Session is already started by Application class
         if (!isset($_SESSION['user_id'])) {
             $response = Response::getInstance();
             $response->redirect('/login');
