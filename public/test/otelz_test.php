@@ -265,7 +265,7 @@ function testOtelZDetailAPI($facilityID, $currency, $startDate, $endDate)
 
     // Prepare request data (Old System Format)
     $data = [
-        "api_version" => "1.0.0",
+        //"api_version" => "1.0.0",
         "partner_id" => 1316,
         "facility_reference" => (int)$facilityID,
         "start_date" => $startDate,
@@ -277,14 +277,14 @@ function testOtelZDetailAPI($facilityID, $currency, $startDate, $endDate)
             ],
         ],
         "lang" => "tr",
-        "currency" => $currency,
+        //"currency" => $currency,
         "price_formatter" => [
             "decimal_digit_number" => 2,
         ],
         "user_country" => "TR",
-        "device_type" => 1,
-        "request_type" => 1,
-        "web_hook_url" => "",
+        //"device_type" => 1,
+        //"request_type" => 1,
+        //"web_hook_url" => "",
     ];
 
     $json = json_encode($data, JSON_PRETTY_PRINT);
@@ -316,7 +316,7 @@ function testOtelZDetailAPI($facilityID, $currency, $startDate, $endDate)
     echo "</pre>";
 
     // Make API call
-    $ch = curl_init('https://fullconnect.otelz.com/detail/availability');
+    $ch = curl_init('https://fullconnect.otelz.com/v1/detail/availability');
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -325,7 +325,7 @@ function testOtelZDetailAPI($facilityID, $currency, $startDate, $endDate)
     curl_setopt($ch, CURLOPT_TIMEOUT, 30);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
-    echo "<p>🔄 Making API call to: <strong>https://fullconnect.otelz.com/detail/availability</strong></p>";
+    echo "<p>🔄 Making API call to: <strong>https://fullconnect.otelz.com/v1/detail/availability</strong></p>";
 
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
