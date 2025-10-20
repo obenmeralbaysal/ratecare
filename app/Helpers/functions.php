@@ -113,6 +113,32 @@ function url($path = '')
 }
 
 /**
+ * Get environment variable
+ */
+function env($key, $default = null)
+{
+    static $envVars = null;
+    
+    if ($envVars === null) {
+        $envVars = [];
+        $envFile = __DIR__ . '/../../.env';
+        
+        if (file_exists($envFile)) {
+            $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            foreach ($lines as $line) {
+                if (strpos($line, '#') === 0) continue; // Skip comments
+                if (strpos($line, '=') === false) continue; // Skip invalid lines
+                
+                list($key, $value) = explode('=', $line, 2);
+                $envVars[trim($key)] = trim($value);
+            }
+        }
+    }
+    
+    return isset($envVars[$key]) ? $envVars[$key] : $default;
+}
+
+/**
  * Generate asset URL
  */
 function asset($path)
