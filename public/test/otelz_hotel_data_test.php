@@ -6,7 +6,7 @@
 
 // Test parameters
 $partner_id = 1316;
-$facility_reference = 9518; // Test facility ID
+$facility_reference = 14361; // Test facility ID
 $lang = "tr";
 $country = "TR";
 $city_reference = null; // Optional
