@@ -101,9 +101,12 @@ class UsersController extends BaseController
                         u.reseller_id,
                         u.created_at,
                         u.is_rate_comparison_active,
-                        r.namesurname as reseller_name
+                        r.namesurname as reseller_name,
+                        h.name as hotel_name,
+                        h.web_url as hotel_web_url
                     FROM users u
                     LEFT JOIN users r ON u.reseller_id = r.id
+                    LEFT JOIN hotels h ON u.id = h.user_id
                     WHERE 1=1";
             
             $params = [];

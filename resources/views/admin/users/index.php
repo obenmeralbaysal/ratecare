@@ -371,6 +371,23 @@
             line-height: 1.5;
             border-radius: 0.2rem;
         }
+        
+        /* Hotel link styles */
+        .hotel-link {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .hotel-link:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+        
+        .hotel-name {
+            color: #333;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body class="theme-black">
@@ -499,8 +516,18 @@
                                                 </a>
                                             </td>
                                             <td>
-                                                <!-- Hotel info will be added later -->
-                                                <span class="text-muted">-</span>
+                                                <?php if($user['hotel_name']): ?>
+                                                    <?php if($user['hotel_web_url']): ?>
+                                                        <a href="<?php echo htmlspecialchars($user['hotel_web_url']); ?>" target="_blank" class="hotel-link">
+                                                            <?php echo htmlspecialchars($user['hotel_name']); ?>
+                                                            <i class="zmdi zmdi-open-in-new" style="font-size: 12px; margin-left: 4px;"></i>
+                                                        </a>
+                                                    <?php else: ?>
+                                                        <span class="hotel-name"><?php echo htmlspecialchars($user['hotel_name']); ?></span>
+                                                    <?php endif; ?>
+                                                <?php else: ?>
+                                                    <span class="text-muted">No hotel</span>
+                                                <?php endif; ?>
                                             </td>
                                             <td><?php echo htmlspecialchars($user['email']); ?></td>
                                             <td class="text-center">
