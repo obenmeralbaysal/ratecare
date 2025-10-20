@@ -203,16 +203,16 @@
         <div class="login-section">
             <h2 class="login-title">Log in</h2>
             
-            {!! flash('error') ? '<div class="alert alert-error">' . flash('error') . '</div>' : '' !!}
-            {!! flash('success') ? '<div class="alert alert-success">' . flash('success') . '</div>' : '' !!}
+            <?php echo flash('error') ? '<div class="alert alert-error">' . flash('error') . '</div>' : ''; ?>
+            <?php echo flash('success') ? '<div class="alert alert-success">' . flash('success') . '</div>' : ''; ?>
             
-            <form method="POST" action="{{ url('/login') }}" id="loginForm">
-                {!! csrfField() !!}
+            <form method="POST" action="<?php echo htmlspecialchars(url('/login') ?? ""); ?>" id="loginForm">
+                <?php echo csrfField(); ?>
                 
                 <div class="form-group">
                     <label for="email" class="form-label">Email</label>
                     <input type="email" id="email" name="email" class="form-input" 
-                           value="{{ old('email') }}" required autofocus>
+                           value="<?php echo htmlspecialchars(old('email') ?? ""); ?>" required autofocus>
                 </div>
                 
                 <div class="form-group">
@@ -229,7 +229,7 @@
             </form>
             
             <div class="forgot-password">
-                <a href="{{ url('/forgot-password') }}">Forgot Password?</a>
+                <a href="<?php echo htmlspecialchars(url('/forgot-password') ?? ""); ?>">Forgot Password?</a>
             </div>
         </div>
     </div>
