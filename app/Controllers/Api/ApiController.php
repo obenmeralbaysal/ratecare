@@ -243,9 +243,20 @@ class ApiController extends BaseController
     private function addBookingPlatform(&$response, $hotel, $currency, $checkIn, $checkOut, $adult)
     {
         if ($hotel['booking_is_active'] && !empty($hotel['booking_url'])) {
+            $this->logMessage("Booking.com: Processing hotel " . $hotel['name'] . " with URL " . $hotel['booking_url'], 'INFO');
+            
             $price = $this->getBookingPrice($hotel, $currency, $checkIn, $checkOut);
-            $url = $this->getBookingUrl($hotel, $currency, $checkIn, $checkOut);
-            $this->addPlatformToResponse($response, 'booking', 'Booking.com', $price, $url);
+            
+            // Only add to response if price is valid
+            if ($price !== "NA") {
+                $url = $this->getBookingUrl($hotel, $currency, $checkIn, $checkOut);
+                $this->addPlatformToResponse($response, 'booking', 'Booking.com', $price, $url);
+                $this->logMessage("Booking.com: Added to response with price " . $price, 'INFO');
+            } else {
+                $this->logMessage("Booking.com: Price not available for " . $hotel['name'], 'WARNING');
+            }
+        } else {
+            $this->logMessage("Booking.com: Skipped - not active or no URL for " . $hotel['name'], 'INFO');
         }
     }
     
@@ -289,9 +300,21 @@ class ApiController extends BaseController
     private function addOtelzPlatform(&$response, $hotel, $currency, $checkIn, $checkOut, $adult)
     {
         if ($hotel['otelz_is_active'] && !empty($hotel['otelz_url'])) {
+            // Validate facility ID before making API call
+            if (!is_numeric($hotel['otelz_url'])) {
+                $this->logMessage("OtelZ: Skipping invalid facility ID - " . $hotel['otelz_url'], 'WARNING');
+                return;
+            }
+            
             $price = $this->getOtelzPrice($hotel, $currency, $checkIn, $checkOut);
-            $url = $this->getOtelzUrl($hotel, $currency, $checkIn, $checkOut);
-            $this->addPlatformToResponse($response, 'otelz', 'OtelZ', $price, $url);
+            
+            // Only add to response if price is valid
+            if ($price !== "NA") {
+                $url = $this->getOtelzUrl($hotel, $currency, $checkIn, $checkOut);
+                $this->addPlatformToResponse($response, 'otelz', 'OtelZ', $price, $url);
+            } else {
+                $this->logMessage("OtelZ: Price not available for facility ID " . $hotel['otelz_url'], 'INFO');
+            }
         }
     }
     
@@ -567,12 +590,21 @@ class ApiController extends BaseController
      */
     private function getBookingPriceReal($url, $currency, $checkinDate, $checkoutDate)
     {
+        $this->logMessage("Booking.com API: Starting price request for URL {$url}, currency {$currency}, dates {$checkinDate} to {$checkoutDate}", 'INFO');
+        
         if (substr($url, -8) != ".tr.html") {
             $url = str_replace(".html", ".tr.html", $url);
         }
 
         $search_url = $url . "?selected_currency=" . $currency . "&checkin=" . $checkinDate . "&checkout=" . $checkoutDate;
+        $this->logMessage("Booking.com: Fetching URL - " . $search_url, 'INFO');
+        
         $html = $this->getHTML($search_url, 30, 2);
+        
+        if (!$html) {
+            $this->logMessage("Booking.com: Failed to fetch HTML content", 'ERROR');
+            return "NA";
+        }
 
         switch ($currency) {
             case "EUR":
@@ -585,12 +617,38 @@ class ApiController extends BaseController
                 $currency_symbol = "TL";
         }
 
+        // Try primary price pattern
         $price = $this->search('"b_price":"' . $currency_symbol, '"', $html);
         
         if ($price != []) {
-            return round(preg_replace('/\xc2\xa0/', "", str_replace(".", "", trim($price[0]))));
+            $finalPrice = round(preg_replace('/\xc2\xa0/', "", str_replace(".", "", trim($price[0]))));
+            $this->logMessage("Booking.com: Found primary price - " . $finalPrice, 'INFO');
+            return $finalPrice;
         }
         
+        // Try alternative price pattern (like old system)
+        $alternativePrice = $this->search("tarihlerinizde", "gibi", $html);
+        
+        if ($alternativePrice != []) {
+            switch ($currency) {
+                case "EUR":
+                    $alternativePrice = $this->search("tarihlerinizde \xE2\x82\xAc", "gibi", $html);
+                    break;
+                case "USD":
+                    $alternativePrice = $this->search("tarihlerinizde US$", "gibi", $html);
+                    break;
+                default:
+                    $alternativePrice = $this->search("tarihlerinizde TL", "gibi", $html);
+            }
+            
+            if ($alternativePrice != []) {
+                $finalPrice = round(preg_replace('/\xc2\xa0/', "", str_replace(".", "", trim($alternativePrice[0]))));
+                $this->logMessage("Booking.com: Found alternative price - " . $finalPrice, 'INFO');
+                return $finalPrice;
+            }
+        }
+        
+        $this->logMessage("Booking.com: No price found in HTML content", 'WARNING');
         return "NA";
     }
     
@@ -669,6 +727,8 @@ class ApiController extends BaseController
      */
     private function getOtelZPriceReal($otelzUrl, $currency, $startDate, $endDate)
     {
+        $this->logMessage("OtelZ API: Starting price request for facility {$otelzUrl}, currency {$currency}, dates {$startDate} to {$endDate}", 'INFO');
+        
         // Check if otelzUrl is numeric
         if (!is_numeric($otelzUrl)) {
             $this->logMessage("OtelZ API: Invalid facility ID - " . $otelzUrl, 'ERROR');
@@ -686,22 +746,25 @@ class ApiController extends BaseController
         }
 
         $data = [
-            "api_version" => "1.0.0",
-            "partner_id" => (int)env('OTELZ_PARTNER_ID', 1316),
-            "facility_reference" => $facilityID,
-            "start_date" => $startDate,
-            "end_date" => $endDate,
-            "party" => [["adults" => 2, "children" => []]],
-            "lang" => "tr",
-            "currency" => $currency,
-            "price_formatter" => ["decimal_digit_number" => 2],
-            "user_country" => "TR",
-            "device_type" => 1,
-            "request_type" => 1,
-            "web_hook_url" => "",
+            "detail_request" => [
+                "facility_reference" => $facilityID,
+                "start_date" => $startDate,
+                "end_date" => $endDate,
+                "party" => [["adults" => 2, "children" => []]],
+                "lang" => "tr",
+                "currency" => $currency,
+                "price_formatter" => ["decimal_digit_number" => 2],
+                "user_country" => "TR",
+                "device_type" => "Desktop",
+                "request_type" => "Strict",
+                "web_hook_url" => "",
+                "partner_id" => (int)env('OTELZ_PARTNER_ID', 1316)
+            ]
         ];
 
         $json = json_encode($data);
+        $this->logMessage("OtelZ API: Request JSON - " . $json, 'DEBUG');
+        
         $headers = [
             'Content-Type: application/json',
             'Authorization: Basic ' . base64_encode("$username:$passwd"),
@@ -743,25 +806,62 @@ class ApiController extends BaseController
 
         // Check for API errors
         if (isset($result->errors)) {
-            $this->logMessage("OtelZ API errors: " . json_encode($result->errors), 'ERROR');
+            $errorMessage = "OtelZ API errors for facility ID {$facilityID}: " . json_encode($result->errors);
+            $this->logMessage($errorMessage, 'ERROR');
+            
+            // Check for specific error codes
+            foreach ($result->errors as $error) {
+                if ($error->code == 10002010) {
+                    $this->logMessage("OtelZ API: Facility {$facilityID} not available or invalid", 'WARNING');
+                }
+            }
+            
             return "NA";
         }
 
         // Check result structure
         if ($result && isset($result->detail_result)) {
-            if (isset($result->detail_result->min_price) && 
-                isset($result->detail_result->min_price->total_room) &&
-                $result->detail_result->min_price->total_room == 0) {
-                return "NA";
+            // Check if there are available rooms
+            if (isset($result->detail_result->min_price)) {
+                if (isset($result->detail_result->min_price->total_room) &&
+                    $result->detail_result->min_price->total_room == 0) {
+                    $this->logMessage("OtelZ API: No rooms available for facility {$facilityID}", 'INFO');
+                    return "NA";
+                }
+                
+                // Get minimum price
+                if (isset($result->detail_result->min_price->net_total->amount)) {
+                    $price = $result->detail_result->min_price->net_total->amount;
+                    $this->logMessage("OtelZ API: Found price {$price} for facility {$facilityID}", 'INFO');
+                    return round($price);
+                }
             }
             
-            if (isset($result->detail_result->min_price->net_total->amount)) {
-                $price = $result->detail_result->min_price->net_total->amount;
-                return round($price);
+            // Alternative: Check room_types for prices
+            if (isset($result->detail_result->room_types) && is_array($result->detail_result->room_types)) {
+                $minPrice = null;
+                
+                foreach ($result->detail_result->room_types as $roomType) {
+                    if (isset($roomType->room_prices) && is_array($roomType->room_prices)) {
+                        foreach ($roomType->room_prices as $roomPrice) {
+                            if (isset($roomPrice->net_total->amount)) {
+                                $currentPrice = $roomPrice->net_total->amount;
+                                if ($minPrice === null || $currentPrice < $minPrice) {
+                                    $minPrice = $currentPrice;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if ($minPrice !== null) {
+                    $this->logMessage("OtelZ API: Found minimum price {$minPrice} from room types for facility {$facilityID}", 'INFO');
+                    return round($minPrice);
+                }
             }
         }
 
-        $this->logMessage("OtelZ API: Unexpected response structure - " . substr($response, 0, 200), 'ERROR');
+        $this->logMessage("OtelZ API: Unexpected response structure for facility {$facilityID} - " . substr($response, 0, 300), 'ERROR');
         return "NA";
     }
     
