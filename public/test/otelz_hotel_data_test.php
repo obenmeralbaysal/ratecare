@@ -75,8 +75,8 @@ function testOtelZHotelDataAPI($partner_id, $facility_reference = null, $lang = 
 
     // Test different possible endpoints
     $endpoints = [
-        'https://fullconnect.otelz.com/data/hotel',
-        'https://fullconnect.otelz.com/v2/data/hotel',
+        'https://fullconnect.otelz.com/data/hotel_data/',
+        'https://fullconnect.otelz.com/v2/data/hotel_data',
         'https://fullconnect.otelz.com/hotel/data',
         'https://fullconnect.otelz.com/data/facility'
     ];
