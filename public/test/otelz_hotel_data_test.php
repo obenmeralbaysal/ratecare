@@ -204,7 +204,7 @@ function testOtelZHotelDataGET($partner_id, $facility_reference = null, $lang = 
 
     // Test different possible endpoints with GET
     $endpoints = [
-        'https://fullconnect.otelz.com/data/hotel_data',
+        'https://fullconnect.otelz.com/data/hotel_data/',
         'https://fullconnect.otelz.com/v2/data/hotel_data'
     ];
 
