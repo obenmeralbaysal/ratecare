@@ -2,48 +2,179 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Core\Hash;
 
 /**
- * App\Models\User
- *
- * @property int $id
- * @property string $namesurname
- * @property string $email
- * @property int|null $is_admin
- * @property int $hotel_limit
- * @property string|null $email_verified_at
- * @property string $password
- * @property string|null $remember_token
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- * @property int $user_type
- * @property int|null $reseller_id
- * @property string|null $logo
- * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\Hotel[] $hotels
- * @property-read int|null $hotels_count
- * @method static \Illuminate\Database\Eloquent\Builder|User newModelQuery()
- * @method static \Illuminate\Database\Eloquent\Builder|User newQuery()
- * @method static \Illuminate\Database\Eloquent\Builder|User query()
- * @method static \Illuminate\Database\Eloquent\Builder|User whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|User whereEmail($value)
- * @method static \Illuminate\Database\Eloquent\Builder|User whereEmailVerifiedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|User whereHotelLimit($value)
- * @method static \Illuminate\Database\Eloquent\Builder|User whereId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|User whereIsAdmin($value)
- * @method static \Illuminate\Database\Eloquent\Builder|User whereLogo($value)
- * @method static \Illuminate\Database\Eloquent\Builder|User whereNamesurname($value)
- * @method static \Illuminate\Database\Eloquent\Builder|User wherePassword($value)
- * @method static \Illuminate\Database\Eloquent\Builder|User whereRememberToken($value)
- * @method static \Illuminate\Database\Eloquent\Builder|User whereResellerId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|User whereUpdatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|User whereUserType($value)
- * @mixin \Eloquent
+ * User Model
  */
-class User extends Model
+class User extends BaseModel
 {
+    protected $table = 'users';
+    protected $fillable = [
+        'namesurname', 'email', 'password', 'is_admin', 'reseller_id', 'is_active'
+    ];
+    
+    /**
+     * Create new user with hashed password
+     */
+    public function createUser($data)
+    {
+        if (isset($data['password'])) {
+            $data['password'] = Hash::make($data['password']);
+        }
+        
+        return $this->create($data);
+    }
+    
+    /**
+     * Update user password
+     */
+    public function updatePassword($id, $newPassword)
+    {
+        return $this->update($id, [
+            'password' => Hash::make($newPassword)
+        ]);
+    }
+    
+    /**
+     * Find user by email
+     */
+    public function findByEmail($email)
+    {
+        return $this->whereFirst('email', $email);
+    }
+    
+    /**
+     * Get users by reseller
+     */
+    public function getByReseller($resellerId)
+    {
+        return $this->where('reseller_id', $resellerId);
+    }
+    
+    /**
+     * Get admin users
+     */
+    public function getAdmins()
+    {
+        return $this->where('is_admin', 1);
+    }
+    
+    /**
+     * Get resellers (users with reseller_id = 0)
+     */
+    public function getResellers()
+    {
+        return $this->where('reseller_id', 0);
+    }
+    
+    /**
+     * Get customers (users with reseller_id > 0)
+     */
+    public function getCustomers()
+    {
+        $sql = "SELECT * FROM {$this->table} WHERE reseller_id > 0";
+        return $this->raw($sql);
+    }
+    
+    /**
+     * Check if user is admin
+     */
+    public function isAdmin($userId)
+    {
+        $user = $this->find($userId);
+        return $user && $user['is_admin'];
+    }
+    
+    /**
+     * Check if user is reseller
+     */
+    public function isReseller($userId)
+    {
+        $user = $this->find($userId);
+        return $user && $user['reseller_id'] == 0 && !$user['is_admin'];
+    }
+    
+    /**
+     * Check if user is customer
+     */
+    public function isCustomer($userId)
+    {
+        $user = $this->find($userId);
+        return $user && $user['reseller_id'] > 0;
+    }
+    
+    /**
+     * Get user's hotels
+     */
+    public function getHotels($userId)
+    {
+        $sql = "SELECT * FROM hotels WHERE user_id = ?";
+        return $this->raw($sql, [$userId]);
+    }
+    
+    /**
+     * Get user's widgets
+     */
+    public function getWidgets($userId)
+    {
+        $sql = "SELECT w.* FROM widgets w 
+                JOIN hotels h ON w.hotel_id = h.id 
+                WHERE h.user_id = ?";
+        return $this->raw($sql, [$userId]);
+    }
+    
+    /**
+     * Activate user
+     */
+    public function activate($userId)
+    {
+        return $this->update($userId, ['is_active' => 1]);
+    }
+    
+    /**
+     * Deactivate user
+     */
+    public function deactivate($userId)
+    {
+        return $this->update($userId, ['is_active' => 0]);
+    }
+    
+    /**
+     * Get user's hotels (relationship)
+     */
     public function hotels()
     {
         return $this->hasMany('App\Models\Hotel', 'user_id');
+    }
+    
+    /**
+     * Get user's invitations sent (relationship)
+     */
+    public function invitesSent()
+    {
+        return $this->hasMany('App\Models\Invite', 'invited_by');
+    }
+    
+    /**
+     * Get reseller's customers (relationship)
+     */
+    public function customers()
+    {
+        if ($this->reseller_id == 0) {
+            return $this->hasMany('App\Models\User', 'reseller_id');
+        }
+        return [];
+    }
+    
+    /**
+     * Get user's reseller (relationship)
+     */
+    public function reseller()
+    {
+        if ($this->reseller_id > 0) {
+            return $this->belongsTo('App\Models\User', 'reseller_id');
+        }
+        return null;
     }
 }

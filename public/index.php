@@ -1,63 +1,42 @@
 <?php
 
 /**
- * Laravel - A PHP Framework For Web Artisans
- *
- * @package  Laravel
- * @author   Taylor Otwell <taylor@laravel.com>
+ * Hotel DigiLab V2 - Framework-less MVC Application
+ * Entry Point
  */
 
-define('LARAVEL_START', microtime(true));
-define('DATETIME_FORMAT', 'd-m-Y H:i');
-define('TIME_FORMAT', 'H:i');
-define('DATE_FORMAT', 'd-m-Y');
+// Define application constants
+define('APP_START_TIME', microtime(true));
+define('APP_ROOT', dirname(__DIR__));
+define('PUBLIC_PATH', __DIR__);
 
-/*
-|--------------------------------------------------------------------------
-| Register The Auto Loader
-|--------------------------------------------------------------------------
-|
-| Composer provides a convenient, automatically generated class loader for
-| our application. We just need to utilize it! We'll simply require it
-| into the script here so that we don't have to worry about manual
-| loading any of our classes later on. It feels great to relax.
-|
-*/
+// Load autoloader
+require_once APP_ROOT . '/core/Autoloader.php';
 
-require __DIR__.'/../vendor/autoload.php';
+// Register autoloader
+$autoloader = new \Core\Autoloader();
+$autoloader->addNamespace('Core', APP_ROOT . '/core');
+$autoloader->addNamespace('App', APP_ROOT . '/app');
+$autoloader->register();
 
-/*
-|--------------------------------------------------------------------------
-| Turn On The Lights
-|--------------------------------------------------------------------------
-|
-| We need to illuminate PHP development, so let us turn on the lights.
-| This bootstraps the framework and gets it ready for use, then it
-| will load up this application so that we can run it and send
-| the responses back to the browser and delight our users.
-|
-*/
+// Load environment variables
+\Core\Environment::load(APP_ROOT . '/.env');
 
-$app = require_once __DIR__.'/../bootstrap/app.php';
+// Load configuration
+\Core\Config::load('app');
+\Core\Config::load('database');
 
-/*
-|--------------------------------------------------------------------------
-| Run The Application
-|--------------------------------------------------------------------------
-|
-| Once we have the application, we can handle the incoming request
-| through the kernel, and send the associated response back to
-| the client's browser allowing them to enjoy the creative
-| and wonderful application we have prepared for them.
-|
-*/
+// Register error handler
+\Core\ErrorHandler::register(APP_ROOT . '/storage/logs/');
 
-$kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
-
-$response = $kernel->handle(
-    $request = Illuminate\Http\Request::capture()
-);
-
-$response->send();
-
-$kernel->terminate($request, $response);
+try {
+    // Bootstrap application
+    $app = \Core\Application::getInstance();
+    $app->bootstrap();
+    
+    // Run application
+    $app->run();
+    
+} catch (Exception $e) {
+    \Core\ErrorHandler::handleException($e);
+}
