@@ -421,8 +421,27 @@ class ApiController extends BaseController
     
     private function getBookingUrl($hotel, $currency, $checkIn, $checkOut)
     {
-        // Mock implementation - would generate booking URL with dates
-        return $hotel['booking_url'] . "?checkin=" . $checkIn . "&checkout=" . $checkOut;
+        $url = $hotel['booking_url'];
+        
+        // Ensure URL ends with .tr.html
+        if (substr($url, -8) != ".tr.html") {
+            $url = str_replace(".html", ".tr.html", $url);
+            $this->logMessage("Booking.com URL: Corrected to .tr.html - " . $url, 'DEBUG');
+        }
+        
+        // Add parameters including selected_currency
+        $params = [
+            'selected_currency' => $currency,
+            'checkin' => $checkIn,
+            'checkout' => $checkOut
+        ];
+        
+        $queryString = http_build_query($params);
+        $finalUrl = $url . "?" . $queryString;
+        
+        $this->logMessage("Booking.com URL: Generated final URL - " . $finalUrl, 'DEBUG');
+        
+        return $finalUrl;
     }
     
     private function getHotelsPrice($hotel, $currency, $checkIn, $checkOut)
@@ -596,6 +615,176 @@ class ApiController extends BaseController
     }
     
     /**
+     * Get cached currency exchange rates from TCMB
+     */
+    private function getCurrencyRates()
+    {
+        $cacheFile = __DIR__ . '/../../cache/currency_rates.json';
+        $cacheDir = dirname($cacheFile);
+        
+        // Create cache directory if it doesn't exist
+        if (!is_dir($cacheDir)) {
+            mkdir($cacheDir, 0755, true);
+        }
+        
+        // Check if cache file exists and is fresh (less than 24 hours old)
+        if (file_exists($cacheFile)) {
+            $cacheTime = filemtime($cacheFile);
+            $now = time();
+            $cacheAge = $now - $cacheTime;
+            
+            // Cache is valid for 24 hours (86400 seconds)
+            if ($cacheAge < 86400) {
+                $cachedData = json_decode(file_get_contents($cacheFile), true);
+                if ($cachedData && isset($cachedData['rates'])) {
+                    $this->logMessage("Currency: Using cached rates (age: " . round($cacheAge/3600, 1) . " hours)", 'DEBUG');
+                    return $cachedData['rates'];
+                }
+            } else {
+                $this->logMessage("Currency: Cache expired (age: " . round($cacheAge/3600, 1) . " hours), fetching new rates", 'DEBUG');
+            }
+        } else {
+            $this->logMessage("Currency: No cache file found, fetching rates from TCMB", 'DEBUG');
+        }
+        
+        // Fetch fresh rates from TCMB
+        $rates = $this->fetchFreshCurrencyRates();
+        
+        if ($rates) {
+            // Save to cache
+            $cacheData = [
+                'timestamp' => time(),
+                'date' => date('Y-m-d H:i:s'),
+                'rates' => $rates
+            ];
+            
+            file_put_contents($cacheFile, json_encode($cacheData, JSON_PRETTY_PRINT));
+            $this->logMessage("Currency: Rates cached successfully", 'DEBUG');
+        }
+        
+        return $rates;
+    }
+    
+    /**
+     * Fetch fresh currency rates from TCMB
+     */
+    private function fetchFreshCurrencyRates()
+    {
+        try {
+            $this->logMessage("Currency: Fetching fresh exchange rates from TCMB", 'INFO');
+            
+            $contextOptions = [
+                'http' => [
+                    'timeout' => 15,
+                    'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                ]
+            ];
+            
+            $file = file_get_contents(
+                'https://www.tcmb.gov.tr/kurlar/today.xml',
+                false,
+                stream_context_create($contextOptions)
+            );
+            
+            if (!$file) {
+                $this->logMessage("Currency: Failed to fetch TCMB XML", 'ERROR');
+                return $this->getFallbackRates();
+            }
+            
+            $temp = preg_replace('/&(?!(quot|amp|pos|lt|gt);)/', '&amp;', $file);
+            $currency_xml = simplexml_load_string($temp);
+            
+            if (!$currency_xml) {
+                $this->logMessage("Currency: Failed to parse TCMB XML", 'ERROR');
+                return $this->getFallbackRates();
+            }
+            
+            $rates = [
+                'eur_buying' => (float)$currency_xml->Currency[3]->BanknoteBuying,
+                'usd_buying' => (float)$currency_xml->Currency[0]->BanknoteBuying,
+                'usd_eur_cross' => (float)$currency_xml->Currency[3]->CrossRateOther,
+                'last_updated' => date('Y-m-d H:i:s')
+            ];
+            
+            // Validate rates (should be reasonable values)
+            if ($rates['eur_buying'] < 20 || $rates['eur_buying'] > 50 || 
+                $rates['usd_buying'] < 20 || $rates['usd_buying'] > 50) {
+                $this->logMessage("Currency: Invalid rates detected - EUR: {$rates['eur_buying']}, USD: {$rates['usd_buying']}", 'ERROR');
+                return $this->getFallbackRates();
+            }
+            
+            $this->logMessage("Currency: Fresh rates fetched - EUR: {$rates['eur_buying']}, USD: {$rates['usd_buying']}", 'INFO');
+            
+            return $rates;
+            
+        } catch (\Exception $e) {
+            $this->logMessage("Currency: Error fetching fresh rates - " . $e->getMessage(), 'ERROR');
+            return $this->getFallbackRates();
+        }
+    }
+    
+    /**
+     * Get fallback currency rates when TCMB is unavailable
+     */
+    private function getFallbackRates()
+    {
+        $this->logMessage("Currency: Using fallback rates", 'WARNING');
+        
+        // Fallback to approximate rates (should be updated periodically)
+        return [
+            'eur_buying' => 34.50,
+            'usd_buying' => 32.00,
+            'usd_eur_cross' => 1.08,
+            'last_updated' => 'fallback',
+            'is_fallback' => true
+        ];
+    }
+    
+    /**
+     * Convert price to TRY (Turkish Lira)
+     */
+    private function convertToTRY($price, $fromCurrency)
+    {
+        // If already TRY, return as is
+        if ($fromCurrency === 'TRY' || $fromCurrency === 'TL') {
+            return round($price);
+        }
+        
+        // If price is not numeric or "NA", return as is
+        if (!is_numeric($price) || $price === "NA") {
+            return $price;
+        }
+        
+        $rates = $this->getCurrencyRates();
+        if (!$rates) {
+            $this->logMessage("Currency: Cannot convert {$price} {$fromCurrency} to TRY - rates unavailable", 'WARNING');
+            return $price; // Return original price if rates unavailable
+        }
+        
+        $tryPrice = $price;
+        
+        $cacheInfo = isset($rates['is_fallback']) ? ' (fallback)' : ' (cached)';
+        
+        switch (strtoupper($fromCurrency)) {
+            case 'EUR':
+                $tryPrice = $price * $rates['eur_buying'];
+                $this->logMessage("Currency: Converted {$price} EUR to {$tryPrice} TRY (rate: {$rates['eur_buying']}{$cacheInfo})", 'DEBUG');
+                break;
+                
+            case 'USD':
+                $tryPrice = $price * $rates['usd_buying'];
+                $this->logMessage("Currency: Converted {$price} USD to {$tryPrice} TRY (rate: {$rates['usd_buying']}{$cacheInfo})", 'DEBUG');
+                break;
+                
+            default:
+                $this->logMessage("Currency: Unknown currency {$fromCurrency}, returning original price", 'WARNING');
+                return $price;
+        }
+        
+        return round($tryPrice);
+    }
+    
+    /**
      * Get Booking.com price
      */
     private function getBookingPriceReal($url, $currency, $checkinDate, $checkoutDate)
@@ -641,8 +830,13 @@ class ApiController extends BaseController
         
         if (!empty($price)) {
             $finalPrice = round(preg_replace('/\xc2\xa0/', "", str_replace(".", "", trim($price[0]))));
-            $this->logMessage("Booking.com: Found primary price - " . $finalPrice . " with proxy method", 'INFO');
-            return $finalPrice;
+            $this->logMessage("Booking.com: Found primary price - " . $finalPrice . " " . $currency . " with proxy method", 'INFO');
+            
+            // Convert to TRY if needed
+            $tryPrice = $this->convertToTRY($finalPrice, $currency);
+            $this->logMessage("Booking.com: Final price after conversion - " . $tryPrice . " TRY", 'INFO');
+            
+            return $tryPrice;
         }
         
         $this->logMessage("Booking.com: Primary price pattern not found with proxy method", 'DEBUG');
@@ -667,8 +861,13 @@ class ApiController extends BaseController
             
             if (!empty($currencyPrice)) {
                 $finalPrice = round(preg_replace('/\xc2\xa0/', "", str_replace(".", "", trim($currencyPrice[0]))));
-                $this->logMessage("Booking.com: Found alternative price - " . $finalPrice . " with proxy method", 'INFO');
-                return $finalPrice;
+                $this->logMessage("Booking.com: Found alternative price - " . $finalPrice . " " . $currency . " with proxy method", 'INFO');
+                
+                // Convert to TRY if needed
+                $tryPrice = $this->convertToTRY($finalPrice, $currency);
+                $this->logMessage("Booking.com: Final alternative price after conversion - " . $tryPrice . " TRY", 'INFO');
+                
+                return $tryPrice;
             }
         }
         
@@ -863,8 +1062,13 @@ class ApiController extends BaseController
                 // Get minimum price
                 if (isset($result->detail_result->min_price->net_total->amount)) {
                     $price = $result->detail_result->min_price->net_total->amount;
-                    $this->logMessage("OtelZ API: Found price {$price} for facility {$facilityID}", 'INFO');
-                    return round($price);
+                    $this->logMessage("OtelZ API: Found price {$price} {$currency} for facility {$facilityID}", 'INFO');
+                    
+                    // Convert to TRY if needed
+                    $tryPrice = $this->convertToTRY($price, $currency);
+                    $this->logMessage("OtelZ API: Final price after conversion - {$tryPrice} TRY for facility {$facilityID}", 'INFO');
+                    
+                    return $tryPrice;
                 }
             }
             
@@ -886,8 +1090,13 @@ class ApiController extends BaseController
                 }
                 
                 if ($minPrice !== null) {
-                    $this->logMessage("OtelZ API: Found minimum price {$minPrice} from room types for facility {$facilityID}", 'INFO');
-                    return round($minPrice);
+                    $this->logMessage("OtelZ API: Found minimum price {$minPrice} {$currency} from room types for facility {$facilityID}", 'INFO');
+                    
+                    // Convert to TRY if needed
+                    $tryPrice = $this->convertToTRY($minPrice, $currency);
+                    $this->logMessage("OtelZ API: Final minimum price after conversion - {$tryPrice} TRY for facility {$facilityID}", 'INFO');
+                    
+                    return $tryPrice;
                 }
             }
         }
