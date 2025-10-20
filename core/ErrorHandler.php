@@ -13,6 +13,11 @@ class ErrorHandler
     {
         self::$logPath = $logPath ?: __DIR__ . '/../storage/logs/';
         
+        // Debug: Echo the actual path being used
+        if (!file_exists(self::$logPath)) {
+            echo "<!-- DEBUG: Log path does not exist: " . self::$logPath . " -->";
+        }
+        
         // Create logs directory if it doesn't exist
         if (!is_dir(self::$logPath)) {
             mkdir(self::$logPath, 0755, true);
