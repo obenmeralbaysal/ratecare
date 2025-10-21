@@ -47,7 +47,7 @@ function sabeeRequest($endpoint, $parameters, $sabeeApiKey)
         ];
         
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, "https://api.sabee.app/v1/{$endpoint}");
+        curl_setopt($ch, CURLOPT_URL, "https://api.sabeeapp.com/connect/{$endpoint}");
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($parameters));
@@ -367,7 +367,9 @@ if ($_POST && isset($_POST['hotel_id'])) {
         
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px;">
             <strong>🔧 API Details:</strong><br>
-            • Endpoint: https://api.sabee.app/v1/hotel/inventory<br>
+            • Base URL: https://api.sabeeapp.com/connect/<br>
+            • Endpoint: hotel/inventory<br>
+            • Full URL: https://api.sabeeapp.com/connect/hotel/inventory<br>
             • Method: POST<br>
             • Authentication: Bearer Token<br>
             • Timeout: 30 seconds
