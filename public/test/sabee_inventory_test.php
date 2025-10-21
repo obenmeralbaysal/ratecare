@@ -41,18 +41,20 @@ function sabeeRequest($endpoint, $parameters, $sabeeApiKey)
 {
     try {
         $headers = [
-            'Content-Type: application/json',
-            'Authorization: Bearer ' . $sabeeApiKey,
-            'Accept: application/json'
+            'api_key: ' . $sabeeApiKey,
+            'api_version: 1'
         ];
         
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, "https://api.sabeeapp.com/connect/{$endpoint}");
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($parameters));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_ENCODING, '');
+        curl_setopt($ch, CURLOPT_MAXREDIRS, 10);
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         
         $response = curl_exec($ch);
@@ -370,8 +372,9 @@ if ($_POST && isset($_POST['hotel_id'])) {
             • Base URL: https://api.sabeeapp.com/connect/<br>
             • Endpoint: hotel/inventory<br>
             • Full URL: https://api.sabeeapp.com/connect/hotel/inventory<br>
-            • Method: POST<br>
-            • Authentication: Bearer Token<br>
+            • Method: GET<br>
+            • Authentication: api_key header<br>
+            • Headers: api_key, api_version: 1<br>
             • Timeout: 30 seconds
         </div>
     </div>

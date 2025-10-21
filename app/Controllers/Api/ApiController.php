@@ -1322,18 +1322,34 @@ class ApiController extends BaseController
     {
         try {
             $headers = [
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $sabeeApiKey,
-                'Accept: application/json'
+                'api_key: ' . $sabeeApiKey,
+                'api_version: 1'
             ];
             
+            // If parameters exist, use POST method for booking/availability
+            $isPost = !empty($parameters) && $endpoint === 'booking/availability';
+            
+            if ($isPost) {
+                $headers[] = 'Content-Type: application/json';
+            }
+            
             $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, "https://api.sabee.app/v1/{$endpoint}");
+            curl_setopt($ch, CURLOPT_URL, "https://api.sabeeapp.com/connect/{$endpoint}");
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($parameters));
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+            curl_setopt($ch, CURLOPT_ENCODING, '');
+            curl_setopt($ch, CURLOPT_MAXREDIRS, 10);
             curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+            
+            if ($isPost) {
+                curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
+                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($parameters));
+            } else {
+                curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+            }
+            
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             
             $response = curl_exec($ch);
