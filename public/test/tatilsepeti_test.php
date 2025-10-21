@@ -62,27 +62,36 @@ function getTatilSepetiPrice($url, $currency, $startDate, $endDate)
         
         echo "<div class='info'>📅 Check-in: {$checkIn}, Check-out: {$checkOut}</div>";
         
-        // Build URL with parameters in TatilSepeti format
-        $searchParams = "oda:2;tarih:{$checkIn},{$checkOut}";
-        $finalUrl = $url . "?ara=" . urlencode($searchParams);
+        // Build POST data (like old system)
+        $postData = "Search=oda%3A2%3Btarih%3A" . $checkIn . "%2C" . $checkOut . "%3Bclick%3Atrue";
         
-        echo "<div class='info'>🔗 Final URL: {$finalUrl}</div>";
-        echo "<div class='info'>📝 Search Parameters: {$searchParams}</div>";
+        echo "<div class='info'>📝 POST Data: {$postData}</div>";
         
         $headers = [
-            'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language: tr-TR,tr;q=0.9,en;q=0.8',
+            'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/116.0',
+            'Accept: application/json, text/javascript, */*; q=0.01',
+            'Accept-Language: en-US,en;q=0.5',
             'Accept-Encoding: gzip, deflate, br',
+            'Content-Type: application/x-www-form-urlencoded; charset=UTF-8',
+            'X-Requested-With: XMLHttpRequest',
+            'Origin: https://www.tatilsepeti.com',
+            'Dnt: 1',
             'Connection: keep-alive',
-            'Upgrade-Insecure-Requests: 1'
+            'Referer: ' . $url,
+            'Sec-Fetch-Dest: empty',
+            'Sec-Fetch-Mode: cors',
+            'Sec-Fetch-Site: same-origin',
+            'Sec-Gpc: 1',
+            'Te: trailers'
         ];
         
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $finalUrl);
+        curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate, br');
+        curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
@@ -95,7 +104,7 @@ function getTatilSepetiPrice($url, $currency, $startDate, $endDate)
         
         echo "<div class='info'>🌐 Using proxy: brd.superproxy.io:22225</div>";
         
-        echo "<div class='info'>🌐 Making GET request to: {$finalUrl}</div>";
+        echo "<div class='info'>🌐 Making POST request to: {$url}</div>";
         
         $result = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -112,65 +121,67 @@ function getTatilSepetiPrice($url, $currency, $startDate, $endDate)
         
         echo "<div class='success'>✅ Response received (" . strlen($result) . " bytes)</div>";
         
-        // Search for price in response - look for Prices--List div and H4 inside
-        echo "<div class='info'>🔍 Searching for price in Prices--List div...</div>";
+        // Parse JSON response (like old system)
+        echo "<div class='info'>🔍 Parsing JSON response...</div>";
         
-        // First find the Prices--List div
-        $pricesListDiv = search('<div class="Prices--List">', '</div>', $result);
+        $decodedResult = json_decode($result, true);
         
-        if (!empty($pricesListDiv)) {
-            echo "<div class='info'>✅ Found Prices--List div</div>";
+        if (!$decodedResult) {
+            echo "<div class='error'>❌ Failed to parse JSON response</div>";
+            echo "<h4>📄 Raw Response:</h4>";
+            echo "<div style='max-height: 400px; overflow-y: auto; background: #f8f9fa; padding: 15px; border: 1px solid #ddd; border-radius: 5px;'>";
+            echo "<pre style='white-space: pre-wrap; word-wrap: break-word; font-size: 12px;'>" . htmlspecialchars($result) . "</pre>";
+            echo "</div>";
+            return "NA";
+        }
+        
+        echo "<div class='success'>✅ JSON parsed successfully</div>";
+        
+        if (!isset($decodedResult["roomList"])) {
+            echo "<div class='error'>❌ No roomList found in JSON response</div>";
+            echo "<div class='info'>📄 Available keys: " . implode(', ', array_keys($decodedResult)) . "</div>";
+            echo "<h4>📄 JSON Response:</h4>";
+            echo "<div style='max-height: 400px; overflow-y: auto; background: #f8f9fa; padding: 15px; border: 1px solid #ddd; border-radius: 5px;'>";
+            echo "<pre style='white-space: pre-wrap; word-wrap: break-word; font-size: 12px;'>" . htmlspecialchars(json_encode($decodedResult, JSON_PRETTY_PRINT)) . "</pre>";
+            echo "</div>";
+            return "NA";
+        }
+        
+        $roomList = $decodedResult["roomList"];
+        echo "<div class='success'>✅ Found roomList in JSON</div>";
+        
+        // Check for availability errors (like old system)
+        $availability = search('<div class="alert', '--error', $roomList);
+        if (in_array(0, $availability)) {
+            echo "<div class='warning'>⚠️ Availability error found</div>";
+            return "NA";
+        }
+        
+        // Search for price in roomList (like old system)
+        echo "<div class='info'>🔍 Searching for price in roomList...</div>";
+        $tryPrice = search('<span class="Prices--Price">', '<small class=\'price-currency\'>', $roomList);
+        
+        if (!empty($tryPrice)) {
+            echo "<div class='success'>✅ Found price pattern</div>";
             
-            // Search for H4 tag inside the Prices--List div
-            $h4Price = search('<h4', '</h4>', $pricesListDiv[0]);
+            $price = str_replace(['.', ','], '', trim($tryPrice[0]));
+            $price = preg_replace('/[^0-9]/', '', $price);
             
-            if (!empty($h4Price)) {
-                echo "<div class='info'>✅ Found H4 tag in Prices--List</div>";
+            if (is_numeric($price) && $price > 0) {
+                echo "<div class='success'>💰 Found price: {$price} TRY</div>";
+                echo "<div class='info'>📄 Raw price text: " . htmlspecialchars($tryPrice[0]) . "</div>";
                 
-                // Extract price from H4 content
-                $priceText = strip_tags($h4Price[0]);
-                $price = str_replace(['.', ',', ' ', 'TL', '₺'], '', trim($priceText));
-                $price = preg_replace('/[^0-9]/', '', $price);
+                // Show roomList content for debugging
+                echo "<h4>📄 RoomList Content:</h4>";
+                echo "<div style='max-height: 300px; overflow-y: auto; background: #f8f9fa; padding: 15px; border: 1px solid #ddd; border-radius: 5px;'>";
+                echo "<pre style='white-space: pre-wrap; word-wrap: break-word; font-size: 12px;'>" . htmlspecialchars($roomList) . "</pre>";
+                echo "</div>";
                 
-                if (is_numeric($price) && $price > 0) {
-                    echo "<div class='success'>💰 Found price in H4: {$price} {$currency}</div>";
-                    echo "<div class='info'>📄 H4 content: " . htmlspecialchars($h4Price[0]) . "</div>";
-                    
-                    // Show complete response for successful case too
-                    echo "<h4>📄 Complete Response (Success):</h4>";
-                    echo "<div style='max-height: 300px; overflow-y: auto; background: #f8f9fa; padding: 15px; border: 1px solid #ddd; border-radius: 5px;'>";
-                    echo "<pre style='white-space: pre-wrap; word-wrap: break-word; font-size: 12px;'>" . htmlspecialchars($result) . "</pre>";
-                    echo "</div>";
-                    
-                    return $price;
-                }
-            } else {
-                echo "<div class='warning'>⚠️ No H4 tag found in Prices--List div</div>";
-            }
-        } else {
-            echo "<div class='warning'>⚠️ No Prices--List div found</div>";
-            
-            // Fallback: try old pattern
-            echo "<div class='info'>🔍 Trying fallback pattern...</div>";
-            $tryPrice = search('<span class="Prices--Price">', '<small class=\'price-currency\'>', $result);
-            
-            if (!empty($tryPrice)) {
-                $price = str_replace(['.', ',', ' '], '', trim($tryPrice[0]));
-                $price = preg_replace('/[^0-9]/', '', $price);
-                
-                if (is_numeric($price) && $price > 0) {
-                    echo "<div class='success'>💰 Found price with fallback pattern: {$price} {$currency}</div>";
-                    
-                    // Show complete response for fallback success too
-                    echo "<h4>📄 Complete Response (Fallback Success):</h4>";
-                    echo "<div style='max-height: 300px; overflow-y: auto; background: #f8f9fa; padding: 15px; border: 1px solid #ddd; border-radius: 5px;'>";
-                    echo "<pre style='white-space: pre-wrap; word-wrap: break-word; font-size: 12px;'>" . htmlspecialchars($result) . "</pre>";
-                    echo "</div>";
-                    
-                    return $price;
-                }
+                return $price;
             }
         }
+        
+        echo "<div class='warning'>⚠️ No valid price found in roomList</div>";
         
         echo "<div class='warning'>⚠️ No valid price found in response</div>";
         
@@ -437,12 +448,13 @@ if ($_POST && isset($_POST['url'])) {
         
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px;">
             <strong>🔧 API Details:</strong><br>
-            • Method: GET<br>
-            • URL Format: {base_url}?ara=oda:2;tarih:{checkin},{checkout}<br>
-            • Example: https://www.tatilsepeti.com/bademli-konak?ara=oda:2;tarih:22.10.2025,25.10.2025<br>
-            • Headers: User-Agent, Accept, Accept-Language<br>
+            • Method: POST<br>
+            • Content-Type: application/x-www-form-urlencoded; charset=UTF-8<br>
+            • POST Data: Search=oda%3A2%3Btarih%3A{checkin}%2C{checkout}%3Bclick%3Atrue<br>
+            • Headers: X-Requested-With: XMLHttpRequest, Sec-Fetch-Mode: cors<br>
             • Proxy: brd.superproxy.io:22225 (Netherlands datacenter)<br>
-            • Price Pattern: &lt;div class="Prices--List"&gt;...&lt;h4&gt;price&lt;/h4&gt;...&lt;/div&gt;<br>
+            • Response: JSON with roomList key<br>
+            • Price Pattern: &lt;span class="Prices--Price"&gt;...&lt;/span&gt; in roomList<br>
             • Timeout: 30 seconds
         </div>
     </div>

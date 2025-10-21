@@ -1115,21 +1115,44 @@ class ApiController extends BaseController
                 return "NA";
             }
             
-            // Search for price in response
-            $tryPrice = $this->search('<span class="Prices--Price">', '<small class=\'price-currency\'>', $result);
+            // Parse JSON response (like old system)
+            $decodedResult = json_decode($result, true);
+            
+            if (!$decodedResult) {
+                $this->logMessage("TatilSepeti: Failed to parse JSON response", 'ERROR');
+                return "NA";
+            }
+            
+            if (!isset($decodedResult["roomList"])) {
+                $this->logMessage("TatilSepeti: No roomList found in JSON response", 'WARNING');
+                return "NA";
+            }
+            
+            $roomList = $decodedResult["roomList"];
+            $this->logMessage("TatilSepeti: Found roomList in JSON", 'INFO');
+            
+            // Check for availability errors (like old system)
+            $availability = $this->search('<div class="alert', '--error', $roomList);
+            if (in_array(0, $availability)) {
+                $this->logMessage("TatilSepeti: Availability error found", 'WARNING');
+                return "NA";
+            }
+            
+            // Search for price in roomList (like old system)
+            $tryPrice = $this->search('<span class="Prices--Price">', '<small class=\'price-currency\'>', $roomList);
             
             if (!empty($tryPrice)) {
-                $price = str_replace(['.', ',', ' '], '', trim($tryPrice[0]));
+                $price = str_replace(['.', ','], '', trim($tryPrice[0]));
                 $price = preg_replace('/[^0-9]/', '', $price);
                 
                 if (is_numeric($price) && $price > 0) {
-                    $finalPrice = $this->convertToTRY($price, $currency);
-                    $this->logMessage("TatilSepeti: Found price {$price} {$currency}, converted to {$finalPrice} TRY", 'INFO');
+                    $finalPrice = $this->convertToTRY($price, 'TRY'); // TatilSepeti returns TRY
+                    $this->logMessage("TatilSepeti: Found price {$price} TRY, converted to {$finalPrice} TRY", 'INFO');
                     return $finalPrice;
                 }
             }
             
-            $this->logMessage("TatilSepeti: No valid price found in response", 'WARNING');
+            $this->logMessage("TatilSepeti: No valid price found in roomList", 'WARNING');
             return "NA";
             
         } catch (\Exception $e) {
