@@ -757,6 +757,9 @@ class ApiController extends BaseController
     {
         $this->logMessage("Booking.com API: Starting price request for URL {$url}, currency {$currency}, dates {$checkinDate} to {$checkoutDate}", 'INFO');
         
+        // DEBUG: Check if this is returning a mock value
+        $this->logMessage("Booking.com DEBUG: This is the REAL implementation, not mock", 'INFO');
+        
         // Ensure URL ends with .tr.html
         if (substr($url, -8) != ".tr.html") {
             $url = str_replace(".html", ".tr.html", $url);
