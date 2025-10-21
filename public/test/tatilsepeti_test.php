@@ -135,6 +135,13 @@ function getTatilSepetiPrice($url, $currency, $startDate, $endDate)
                 if (is_numeric($price) && $price > 0) {
                     echo "<div class='success'>💰 Found price in H4: {$price} {$currency}</div>";
                     echo "<div class='info'>📄 H4 content: " . htmlspecialchars($h4Price[0]) . "</div>";
+                    
+                    // Show complete response for successful case too
+                    echo "<h4>📄 Complete Response (Success):</h4>";
+                    echo "<div style='max-height: 300px; overflow-y: auto; background: #f8f9fa; padding: 15px; border: 1px solid #ddd; border-radius: 5px;'>";
+                    echo "<pre style='white-space: pre-wrap; word-wrap: break-word; font-size: 12px;'>" . htmlspecialchars($result) . "</pre>";
+                    echo "</div>";
+                    
                     return $price;
                 }
             } else {
@@ -153,6 +160,13 @@ function getTatilSepetiPrice($url, $currency, $startDate, $endDate)
                 
                 if (is_numeric($price) && $price > 0) {
                     echo "<div class='success'>💰 Found price with fallback pattern: {$price} {$currency}</div>";
+                    
+                    // Show complete response for fallback success too
+                    echo "<h4>📄 Complete Response (Fallback Success):</h4>";
+                    echo "<div style='max-height: 300px; overflow-y: auto; background: #f8f9fa; padding: 15px; border: 1px solid #ddd; border-radius: 5px;'>";
+                    echo "<pre style='white-space: pre-wrap; word-wrap: break-word; font-size: 12px;'>" . htmlspecialchars($result) . "</pre>";
+                    echo "</div>";
+                    
                     return $price;
                 }
             }
@@ -160,9 +174,11 @@ function getTatilSepetiPrice($url, $currency, $startDate, $endDate)
         
         echo "<div class='warning'>⚠️ No valid price found in response</div>";
         
-        // Show part of response for debugging
-        echo "<h4>📄 Response Sample (first 500 chars):</h4>";
-        echo "<pre>" . htmlspecialchars(substr($result, 0, 500)) . "...</pre>";
+        // Show complete response for debugging
+        echo "<h4>📄 Complete Response:</h4>";
+        echo "<div style='max-height: 400px; overflow-y: auto; background: #f8f9fa; padding: 15px; border: 1px solid #ddd; border-radius: 5px;'>";
+        echo "<pre style='white-space: pre-wrap; word-wrap: break-word; font-size: 12px;'>" . htmlspecialchars($result) . "</pre>";
+        echo "</div>";
         
         return "NA";
         
