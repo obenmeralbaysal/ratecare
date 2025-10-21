@@ -62,33 +62,40 @@ function getTatilSepetiPrice($url, $currency, $startDate, $endDate)
         
         echo "<div class='info'>📅 Check-in: {$checkIn}, Check-out: {$checkOut}</div>";
         
-        $postData = "Search=oda%3A2%3Btarih%3A" . urlencode($checkIn) . "%2C" . urlencode($checkOut) . "%3Bclick%3Atrue";
+        // Build URL with parameters in TatilSepeti format
+        $searchParams = "oda:2;tarih:{$checkIn},{$checkOut}";
+        $finalUrl = $url . "?ara=" . urlencode($searchParams);
         
-        echo "<div class='info'>📝 POST Data: {$postData}</div>";
+        echo "<div class='info'>🔗 Final URL: {$finalUrl}</div>";
+        echo "<div class='info'>📝 Search Parameters: {$searchParams}</div>";
         
         $headers = [
             'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept: application/json, text/javascript, */*; q=0.01',
+            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language: tr-TR,tr;q=0.9,en;q=0.8',
-            'Content-Type: application/x-www-form-urlencoded; charset=UTF-8',
-            'X-Requested-With: XMLHttpRequest',
-            'Origin: https://www.tatilsepeti.com',
-            'Referer: ' . $url
+            'Accept-Encoding: gzip, deflate, br',
+            'Connection: keep-alive',
+            'Upgrade-Insecure-Requests: 1'
         ];
         
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_URL, $finalUrl);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
+        curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate, br');
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
         
-        echo "<div class='info'>🌐 Making request to: {$url}</div>";
+        // Add proxy settings (same as Booking.com)
+        curl_setopt($ch, CURLOPT_PROXY, 'brd.superproxy.io:22225');
+        curl_setopt($ch, CURLOPT_PROXYUSERPWD, 'brd-customer-hl_e5f2315f-zone-datacenter_proxy1-country-nl:uvmqoi66peju');
+        curl_setopt($ch, CURLOPT_PROXYTYPE, CURLPROXY_HTTP);
+        
+        echo "<div class='info'>🌐 Using proxy: brd.superproxy.io:22225</div>";
+        
+        echo "<div class='info'>🌐 Making GET request to: {$finalUrl}</div>";
         
         $result = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -105,16 +112,49 @@ function getTatilSepetiPrice($url, $currency, $startDate, $endDate)
         
         echo "<div class='success'>✅ Response received (" . strlen($result) . " bytes)</div>";
         
-        // Search for price in response
-        $tryPrice = search('<span class="Prices--Price">', '<small class=\'price-currency\'>', $result);
+        // Search for price in response - look for Prices--List div and H4 inside
+        echo "<div class='info'>🔍 Searching for price in Prices--List div...</div>";
         
-        if (!empty($tryPrice)) {
-            $price = str_replace(['.', ',', ' '], '', trim($tryPrice[0]));
-            $price = preg_replace('/[^0-9]/', '', $price);
+        // First find the Prices--List div
+        $pricesListDiv = search('<div class="Prices--List">', '</div>', $result);
+        
+        if (!empty($pricesListDiv)) {
+            echo "<div class='info'>✅ Found Prices--List div</div>";
             
-            if (is_numeric($price) && $price > 0) {
-                echo "<div class='success'>💰 Found price: {$price} {$currency}</div>";
-                return $price;
+            // Search for H4 tag inside the Prices--List div
+            $h4Price = search('<h4', '</h4>', $pricesListDiv[0]);
+            
+            if (!empty($h4Price)) {
+                echo "<div class='info'>✅ Found H4 tag in Prices--List</div>";
+                
+                // Extract price from H4 content
+                $priceText = strip_tags($h4Price[0]);
+                $price = str_replace(['.', ',', ' ', 'TL', '₺'], '', trim($priceText));
+                $price = preg_replace('/[^0-9]/', '', $price);
+                
+                if (is_numeric($price) && $price > 0) {
+                    echo "<div class='success'>💰 Found price in H4: {$price} {$currency}</div>";
+                    echo "<div class='info'>📄 H4 content: " . htmlspecialchars($h4Price[0]) . "</div>";
+                    return $price;
+                }
+            } else {
+                echo "<div class='warning'>⚠️ No H4 tag found in Prices--List div</div>";
+            }
+        } else {
+            echo "<div class='warning'>⚠️ No Prices--List div found</div>";
+            
+            // Fallback: try old pattern
+            echo "<div class='info'>🔍 Trying fallback pattern...</div>";
+            $tryPrice = search('<span class="Prices--Price">', '<small class=\'price-currency\'>', $result);
+            
+            if (!empty($tryPrice)) {
+                $price = str_replace(['.', ',', ' '], '', trim($tryPrice[0]));
+                $price = preg_replace('/[^0-9]/', '', $price);
+                
+                if (is_numeric($price) && $price > 0) {
+                    echo "<div class='success'>💰 Found price with fallback pattern: {$price} {$currency}</div>";
+                    return $price;
+                }
             }
         }
         
@@ -308,7 +348,7 @@ if ($_POST && isset($_POST['url'])) {
                     id="url" 
                     name="url" 
                     value="<?= htmlspecialchars($url ?? '') ?>" 
-                    placeholder="https://www.tatilsepeti.com/otel/hotel-name"
+                    placeholder="https://www.tatilsepeti.com/bademli-konak"
                     required
                 >
             </div>
@@ -381,11 +421,12 @@ if ($_POST && isset($_POST['url'])) {
         
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px;">
             <strong>🔧 API Details:</strong><br>
-            • Method: POST<br>
-            • Content-Type: application/x-www-form-urlencoded; charset=UTF-8<br>
-            • Headers: User-Agent, Accept, X-Requested-With<br>
-            • POST Data: Search=oda%3A2%3Btarih%3A{dates}%3Bclick%3Atrue<br>
-            • Price Pattern: &lt;span class="Prices--Price"&gt;...&lt;/span&gt;<br>
+            • Method: GET<br>
+            • URL Format: {base_url}?ara=oda:2;tarih:{checkin},{checkout}<br>
+            • Example: https://www.tatilsepeti.com/bademli-konak?ara=oda:2;tarih:22.10.2025,25.10.2025<br>
+            • Headers: User-Agent, Accept, Accept-Language<br>
+            • Proxy: brd.superproxy.io:22225 (Netherlands datacenter)<br>
+            • Price Pattern: &lt;div class="Prices--List"&gt;...&lt;h4&gt;price&lt;/h4&gt;...&lt;/div&gt;<br>
             • Timeout: 30 seconds
         </div>
     </div>
