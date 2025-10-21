@@ -107,7 +107,6 @@ class ApiController extends BaseController
             $this->addBookingPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
             $this->addHotelsPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
             $this->addTatilSepetiPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
-            $this->addOdamaxPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
             $this->addOtelzPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
             $this->addEtsturPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
             
@@ -179,9 +178,6 @@ class ApiController extends BaseController
                         break;
                     case 'tatilsepeti':
                         $response["prices"]["tatilsepeti"] = $this->getTatilSepetiPrice($hotel, $currency, $startDate, $endDate);
-                        break;
-                    case 'odamax':
-                        $response["prices"]["odamax"] = $this->getOdamaxPrice($hotel, $currency, $startDate, $endDate);
                         break;
                     case 'otelz':
                         $response["prices"]["otelz"] = $this->getOtelzPrice($hotel, $currency, $startDate, $endDate);
@@ -286,18 +282,6 @@ class ApiController extends BaseController
         if ($hotel['tatilsepeti_is_active'] && !empty($hotel['tatilsepeti_url'])) {
             $price = $this->getTatilSepetiPrice($hotel, $currency, $checkIn, $checkOut);
             $this->addPlatformToResponse($response, 'tatilsepeti', 'Tatil Sepeti', $price, $hotel['tatilsepeti_url']);
-        }
-    }
-    
-    /**
-     * Add Odamax platform to response
-     */
-    private function addOdamaxPlatform(&$response, $hotel, $currency, $checkIn, $checkOut, $adult)
-    {
-        if ($hotel['odamax_is_active'] && !empty($hotel['odamax_url'])) {
-            $price = $this->getOdamaxPrice($hotel, $currency, $checkIn, $checkOut);
-            $url = $this->getOdamaxUrl($hotel, $currency, $checkIn, $checkOut);
-            $this->addPlatformToResponse($response, 'odamax', 'Odamax', $price, $url);
         }
     }
     
@@ -444,32 +428,12 @@ class ApiController extends BaseController
     
     private function getHotelsPrice($hotel, $currency, $checkIn, $checkOut)
     {
-        // Hotels.com returns "NA" in old system
-        $this->logMessage("Hotels.com: Not implemented - returning NA", 'INFO');
-        return "NA";
+        return $this->getHotelsPriceReal($hotel['hotels_url'], $currency, $checkIn, $checkOut);
     }
     
     private function getTatilSepetiPrice($hotel, $currency, $checkIn, $checkOut)
     {
         return $this->getTatilSepetiPriceReal($hotel['tatilsepeti_url'], $currency, $checkIn, $checkOut);
-    }
-    
-    private function getOdamaxPrice($hotel, $currency, $checkIn, $checkOut)
-    {
-        return $this->getOdamaxPriceReal($hotel['odamax_url'], $currency, $checkIn, $checkOut);
-    }
-    
-    private function getOdamaxUrl($hotel, $currency, $checkIn, $checkOut)
-    {
-        $url = $hotel['odamax_url'];
-        $startDate = date("d.m.Y", strtotime($checkIn));
-        $endDate = date("d.m.Y", strtotime($checkOut));
-        
-        if (strpos($url, 'kucukoteller') !== false) {
-            return "{$url}&check_in={$startDate}&check_out={$endDate}&adult_1=2&type=HOTEL&currency={$currency}";
-        } else {
-            return "{$url}?check_in={$startDate}&check_out={$endDate}&adult_1=2&type=HOTEL&currency={$currency}";
-        }
     }
     
     private function getOtelzPrice($hotel, $currency, $checkIn, $checkOut)
@@ -499,7 +463,6 @@ class ApiController extends BaseController
             'booking' => $this->getBookingPrice($hotel, $currency, $startDate, $endDate),
             'hotels' => $this->getHotelsPrice($hotel, $currency, $startDate, $endDate),
             'tatilsepeti' => $this->getTatilSepetiPrice($hotel, $currency, $startDate, $endDate),
-            'odamax' => $this->getOdamaxPrice($hotel, $currency, $startDate, $endDate),
             'reseliva' => $this->getReselivaPrice($hotel, $currency, $startDate, $endDate),
             'otelz' => $this->getOtelzPrice($hotel, $currency, $startDate, $endDate),
             'sabee' => $this->getSabeePrice($hotel, $currency, $startDate, $endDate),
@@ -876,6 +839,228 @@ class ApiController extends BaseController
         
         $this->logMessage("Booking.com: No price found with proxy method", 'WARNING');
         return "NA";
+    }
+    
+    /**
+     * Get Hotels.com price via GraphQL API
+     */
+    private function getHotelsPriceReal($url, $currency, $startDate, $endDate)
+    {
+        $this->logMessage("Hotels.com API: Starting price request for URL {$url}, currency {$currency}, dates {$startDate} to {$endDate}", 'INFO');
+        
+        if (empty($url)) {
+            $this->logMessage("Hotels.com: Empty URL provided", 'ERROR');
+            return "NA";
+        }
+        
+        try {
+            // Parse URL and update query parameters
+            $pathInfo = parse_url($url);
+            if (!array_key_exists("query", $pathInfo)) {
+                $this->logMessage("Hotels.com: No query parameters in URL", 'ERROR');
+                return "NA";
+            }
+            
+            $queryString = $pathInfo["query"];
+            parse_str($queryString, $queryArray);
+            $queryArray["chkin"] = $startDate;
+            $queryArray["chkout"] = $endDate;
+            $newQueryStr = http_build_query($queryArray);
+            $newUrl = "https://" . $pathInfo["host"] . $pathInfo["path"] . "?" . $newQueryStr;
+            
+            $this->logMessage("Hotels.com: Updated URL - " . $newUrl, 'DEBUG');
+            
+            // Extract property ID from URL for GraphQL query
+            $propertyId = $this->extractHotelsPropertyId($url);
+            if (!$propertyId) {
+                $this->logMessage("Hotels.com: Could not extract property ID from URL", 'ERROR');
+                return "NA";
+            }
+            
+            // Prepare GraphQL query
+            $graphqlQuery = $this->buildHotelsGraphQLQuery($propertyId, $startDate, $endDate);
+            
+            $headers = [
+                'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept: */*',
+                'Accept-Language: tr-TR,tr;q=0.9,en;q=0.8',
+                'Accept-Encoding: gzip, deflate, br',
+                'Content-Type: application/json',
+                'Client-Info: shopping-pwa,743f46197f3b193f505182af7292a80dd14e979b,us-west-2',
+                'X-Product-Line: lodging',
+                'X-Page-Id: page.Hotels.Infosite.Information,H,30',
+                'Origin: https://tr.hotels.com',
+                'Referer: ' . $newUrl
+            ];
+            
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, 'https://tr.hotels.com/graphql');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $graphqlQuery);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if (!$response || $httpCode !== 200) {
+                $this->logMessage("Hotels.com: HTTP error {$httpCode} or empty response", 'ERROR');
+                return "NA";
+            }
+            
+            $decodedResponse = json_decode($response, true);
+            
+            if (!$decodedResponse || !isset($decodedResponse[0]["data"]["propertyOffers"]["stickyBar"])) {
+                $this->logMessage("Hotels.com: Invalid response structure or no stickyBar", 'WARNING');
+                return "NA";
+            }
+            
+            if ($decodedResponse[0]["data"]["propertyOffers"]["stickyBar"] == null) {
+                $this->logMessage("Hotels.com: No offers available (stickyBar is null)", 'INFO');
+                return "NA";
+            }
+            
+            // Extract price from response
+            $priceData = $decodedResponse[0]["data"]["propertyOffers"]["stickyBar"]["price"];
+            if (!isset($priceData["formattedDisplayPrice"])) {
+                $this->logMessage("Hotels.com: No formatted display price found", 'WARNING');
+                return "NA";
+            }
+            
+            $price = $priceData["formattedDisplayPrice"];
+            $price = trim(str_replace(["TL", "₺", "€", "$"], "", $price));
+            $price = str_replace([".", ",", " "], "", $price);
+            $price = preg_replace('/[^0-9]/', '', $price);
+            
+            if (!is_numeric($price) || $price <= 0) {
+                $this->logMessage("Hotels.com: Invalid price extracted: " . $price, 'WARNING');
+                return "NA";
+            }
+            
+            $this->logMessage("Hotels.com: Found price {$price} TRY", 'INFO');
+            
+            // Convert to TRY if needed (Hotels.com usually returns TRY for Turkish site)
+            $finalPrice = $this->convertToTRY($price, 'TRY');
+            $this->logMessage("Hotels.com: Final price after conversion - {$finalPrice} TRY", 'INFO');
+            
+            return $finalPrice;
+            
+        } catch (\Exception $e) {
+            $this->logMessage("Hotels.com: Error - " . $e->getMessage(), 'ERROR');
+            return "NA";
+        }
+    }
+    
+    /**
+     * Extract property ID from Hotels.com URL
+     */
+    private function extractHotelsPropertyId($url)
+    {
+        // Try to extract property ID from URL patterns like:
+        // https://tr.hotels.com/ho534033/baldan-suites-hotel-restaurant-marmaris-turkiye/
+        if (preg_match('/\/ho(\d+)\//', $url, $matches)) {
+            return $matches[1];
+        }
+        
+        // Try expediaPropertyId parameter
+        if (preg_match('/expediaPropertyId=(\d+)/', $url, $matches)) {
+            return $matches[1];
+        }
+        
+        $this->logMessage("Hotels.com: Could not extract property ID from URL: " . $url, 'WARNING');
+        return null;
+    }
+    
+    /**
+     * Build GraphQL query for Hotels.com
+     */
+    private function buildHotelsGraphQLQuery($propertyId, $startDate, $endDate)
+    {
+        // Parse dates
+        $checkIn = date_create($startDate);
+        $checkOut = date_create($endDate);
+        
+        $query = [
+            [
+                "operationName" => "PropertyOffersQuery",
+                "variables" => [
+                    "propertyId" => $propertyId,
+                    "searchCriteria" => [
+                        "primary" => [
+                            "dateRange" => [
+                                "checkInDate" => [
+                                    "day" => (int)$checkIn->format('j'),
+                                    "month" => (int)$checkIn->format('n'),
+                                    "year" => (int)$checkIn->format('Y')
+                                ],
+                                "checkOutDate" => [
+                                    "day" => (int)$checkOut->format('j'),
+                                    "month" => (int)$checkOut->format('n'),
+                                    "year" => (int)$checkOut->format('Y')
+                                ]
+                            ],
+                            "destination" => [
+                                "regionName" => "Turkey",
+                                "regionId" => "6054843"
+                            ],
+                            "rooms" => [
+                                [
+                                    "adults" => 2,
+                                    "children" => []
+                                ]
+                            ]
+                        ],
+                        "secondary" => [
+                            "counts" => [],
+                            "booleans" => [],
+                            "selections" => [
+                                [
+                                    "id" => "sort",
+                                    "value" => "RECOMMENDED"
+                                ],
+                                [
+                                    "id" => "privacyTrackingState",
+                                    "value" => "CAN_NOT_TRACK"
+                                ],
+                                [
+                                    "id" => "useRewards",
+                                    "value" => "SHOP_WITHOUT_POINTS"
+                                ]
+                            ],
+                            "ranges" => []
+                        ]
+                    ],
+                    "context" => [
+                        "siteId" => 300000028,
+                        "locale" => "tr_TR",
+                        "eapid" => 28,
+                        "currency" => "TRY",
+                        "device" => [
+                            "type" => "DESKTOP"
+                        ],
+                        "identity" => [
+                            "expUserId" => "-1",
+                            "tuid" => "-1",
+                            "authState" => "ANONYMOUS"
+                        ],
+                        "privacyTrackingState" => "CAN_TRACK"
+                    ]
+                ],
+                "extensions" => [
+                    "persistedQuery" => [
+                        "version" => 1,
+                        "sha256Hash" => "593bde3027fb0475dd6e126fd6ba54df87f2813b660a6f23b3b8ef8f2ec91a8a"
+                    ]
+                ]
+            ]
+        ];
+        
+        return json_encode($query);
     }
     
     /**
@@ -1325,36 +1510,4 @@ class ApiController extends BaseController
         return "NA";
     }
     
-    /**
-     * Get Odamax Price
-     */
-    private function getOdamaxPriceReal($url, $currency, $startDate, $endDate)
-    {
-        $startDate = date("d.m.Y", strtotime($startDate));
-        $endDate = date("d.m.Y", strtotime($endDate));
-
-        if (strpos($url, 'kucukoteller') !== false) {
-            $search_url = "$url&check_in=$startDate&check_out=$endDate&adult_1=2&type=HOTEL&currency=$currency";
-        } else {
-            $search_url = "$url?check_in=$startDate&check_out=$endDate&adult_1=2&type=HOTEL&currency=$currency";
-        }
-
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $search_url);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_HEADER, 1);
-
-        $html = curl_exec($ch);
-        $html = str_replace(["\n", "\r", "\n"], ' ', $html);
-        
-        $tryPrice = $this->search('<i class="integers ">', '</i>', $html);
-        if ($tryPrice) {
-            $tryPrice = str_replace(",", "", trim($tryPrice[0]));
-            $tryPrice = str_replace(".", "", $tryPrice);
-            return round($tryPrice);
-        }
-
-        return "NA";
-    }
 }
