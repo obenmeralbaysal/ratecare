@@ -315,10 +315,24 @@ class ApiController extends BaseController
     private function addEtsturPlatform(&$response, $hotel, $currency, $checkIn, $checkOut, $adult)
     {
         if ($hotel['is_etstur_active'] && !empty($hotel['etstur_hotel_id'])) {
+            $this->logMessage("ETSTur: Processing hotel " . $hotel['name'] . " with hotel_id " . $hotel['etstur_hotel_id'], 'INFO');
+            
             $result = $this->getEtsturPrice($hotel, $currency, $checkIn, $checkOut);
-            if ($result !== "NA") {
-                $this->addPlatformToResponse($response, 'etstur', 'ETSTur', $result['price'], $result['url'], $currency);
+            
+            if ($result !== "NA" && is_array($result)) {
+                // result contains: ['price' => X, 'currency' => Y, 'url' => Z]
+                $priceData = ['price' => $result['price'], 'currency' => $result['currency']];
+                $url = $result['url'];
+                
+                $this->addPlatformToResponse($response, 'etstur', 'ETSTur', $priceData, $url, $currency);
+                $this->logMessage("ETSTur: Successfully added to response with price " . $result['price'] . " " . $result['currency'], 'INFO');
+            } else {
+                $this->logMessage("ETSTur: Price not available for hotel " . $hotel['name'], 'WARNING');
             }
+        } else {
+            $etstur_active = $hotel['is_etstur_active'] ?? 'not_set';
+            $etstur_id = $hotel['etstur_hotel_id'] ?? 'not_set';
+            $this->logMessage("ETSTur: Skipped for " . $hotel['name'] . " - Active: {$etstur_active}, Hotel ID: {$etstur_id}", 'WARNING');
         }
     }
     
@@ -490,14 +504,15 @@ class ApiController extends BaseController
     {
         $result = $this->getEtsturPriceReal($hotel['etstur_hotel_id'], $currency, $checkIn, $checkOut);
         
-        if ($result !== "NA" && is_array($result)) {
+        if ($result !== "NA" && is_array($result) && isset($result['price'])) {
             // Generate Etstur URL (if they have a direct URL pattern)
             $url = "https://www.etstur.com/otel/" . $hotel['etstur_hotel_id'];
             
-            return [
-                'price' => $result, // Pass the whole array with price and currency
-                'url' => $url
-            ];
+            // result already has ['price' => X, 'currency' => Y] format
+            // Add URL to it
+            $result['url'] = $url;
+            
+            return $result;
         }
         
         return "NA";
