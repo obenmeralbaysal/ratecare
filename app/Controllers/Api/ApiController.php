@@ -685,7 +685,10 @@ class ApiController extends BaseController
      */
     private function logMessage($message, $level = 'INFO')
     {
-        $logDir = __DIR__ . '/../../storage/logs';
+        // Use APP_ROOT if defined, otherwise fallback to __DIR__
+        $appRoot = defined('APP_ROOT') ? APP_ROOT : dirname(dirname(dirname(__DIR__)));
+        $logDir = $appRoot . '/storage/logs';
+        
         if (!is_dir($logDir)) {
             mkdir($logDir, 0777, true);
         }
@@ -694,7 +697,12 @@ class ApiController extends BaseController
         $timestamp = date('Y-m-d H:i:s');
         $logEntry = "[{$timestamp}] [{$level}] {$message}" . PHP_EOL;
         
-        file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+        try {
+            file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+        } catch (\Exception $e) {
+            // Fallback to error_log if file write fails
+            error_log("Log write failed: " . $e->getMessage());
+        }
         
         // Also use error_log as fallback
         error_log($message);
