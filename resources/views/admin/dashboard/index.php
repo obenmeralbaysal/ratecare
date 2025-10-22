@@ -207,6 +207,31 @@
             margin: 0;
         }
         
+        /* Cache Stats Cards */
+        .cache-stats-card {
+            cursor: pointer;
+        }
+        
+        .cache-stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+        
+        .cache-stats-card .body h3 {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .cache-stats-card .body h6 {
+            color: #fff;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 10px 0;
+        }
+        
         .m-t-20 {
             margin-top: 20px;
         }
@@ -288,17 +313,14 @@
               <!-- Cache Statistics Cards -->
             <div class="col-lg-4 col-md-6 col-sm-12 text-center">
                 <div class="card tasks_report cache-stats-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff;">
-                    <div class="body">
-                        <i class="zmdi zmdi-hc-4x zmdi-flash"></i>
-                        <h3 class="m-t-10 mb-0" id="cacheHitRate">--%</h3>
-                        <h6 class="m-t-10">CACHE HIT RATE</h6>
-                        <small style="opacity: 0.9;">Last 24 hours</small>
-                        <div class="mt-3">
-                            <a href="<?php echo url('/admin/cache/statistics'); ?>" class="btn btn-sm btn-light">
-                                <i class="zmdi zmdi-chart"></i> View Statistics
-                            </a>
+                    <a href="<?php echo url('/admin/cache/statistics'); ?>" style="color: inherit; text-decoration: none;">
+                        <div class="body">
+                            <i class="zmdi zmdi-hc-4x zmdi-flash"></i>
+                            <h3 class="m-t-10 mb-0" id="cacheHitRate">--%</h3>
+                            <h6 class="m-t-10">CACHE HIT RATE</h6>
+                            <small style="opacity: 0.9;">Last 24 hours • Click for details</small>
                         </div>
-                    </div>
+                    </a>
                 </div>
             </div>
             <div class="col-lg-4 col-md-6 col-sm-12 text-center">
