@@ -75,9 +75,16 @@ class Application
     
     private function loadRoutes()
     {
-        $routesFile = __DIR__ . '/../routes/web.php';
-        if (file_exists($routesFile)) {
-            require $routesFile;
+        // Load web routes
+        $webRoutesFile = __DIR__ . '/../routes/web.php';
+        if (file_exists($webRoutesFile)) {
+            require $webRoutesFile;
+        }
+        
+        // Load API routes
+        $apiRoutesFile = __DIR__ . '/../routes/api.php';
+        if (file_exists($apiRoutesFile)) {
+            require $apiRoutesFile;
         }
     }
 }
