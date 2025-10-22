@@ -449,8 +449,18 @@ class ApiController extends BaseController
     
     private function getEtsturPrice($hotel, $currency, $checkIn, $checkOut)
     {
-        // ETSTur not implemented in old system
-        $this->logMessage("ETSTur: Not implemented - returning NA", 'INFO');
+        $price = $this->getEtsturPriceReal($hotel['etstur_hotel_id'], $currency, $checkIn, $checkOut);
+        
+        if ($price !== "NA") {
+            // Generate Etstur URL (if they have a direct URL pattern)
+            $url = "https://www.etstur.com/otel/" . $hotel['etstur_hotel_id'];
+            
+            return [
+                'price' => $price,
+                'url' => $url
+            ];
+        }
+        
         return "NA";
     }
     
@@ -1550,6 +1560,160 @@ class ApiController extends BaseController
 
         $this->logMessage("OtelZ API: Unexpected response structure for facility {$facilityID} - " . substr($response, 0, 300), 'ERROR');
         return "NA";
+    }
+    
+    /**
+     * Get Etstur Price
+     */
+    private function getEtsturPriceReal($hotelId, $currency, $checkIn, $checkOut)
+    {
+        $this->logMessage("Etstur API: Starting price request for hotel {$hotelId}, currency {$currency}, dates {$checkIn} to {$checkOut}", 'INFO');
+        
+        if (empty($hotelId)) {
+            $this->logMessage("Etstur API: Empty hotel ID provided", 'ERROR');
+            return "NA";
+        }
+        
+        try {
+            // Prepare request data
+            $data = [
+                'hotelId' => $hotelId,
+                'checkIn' => $checkIn,
+                'checkOut' => $checkOut,
+                'adults' => 2,
+                'currency' => $currency
+            ];
+            
+            $json = json_encode($data);
+            $this->logMessage("Etstur API: Request JSON - " . $json, 'DEBUG');
+            
+            // Prepare headers
+            $headers = [
+                'Content-Type: application/json'
+            ];
+            
+            // Initialize cURL
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL => 'https://mapi.etstur.com/api/kucukoteller/availability',
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING => '',
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => 'POST',
+                CURLOPT_POSTFIELDS => $json,
+                CURLOPT_HTTPHEADER => $headers,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => false
+            ]);
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+            
+            // Check for cURL errors
+            if ($curlError) {
+                $this->logMessage("Etstur API cURL error: " . $curlError, 'ERROR');
+                return "NA";
+            }
+            
+            // Check HTTP status
+            if ($httpCode !== 200) {
+                $this->logMessage("Etstur API HTTP error: " . $httpCode . " - Response: " . substr($response, 0, 500), 'ERROR');
+                return "NA";
+            }
+            
+            if (!$response) {
+                $this->logMessage("Etstur API: Empty response", 'ERROR');
+                return "NA";
+            }
+            
+            $this->logMessage("Etstur API: Response received (" . strlen($response) . " bytes)", 'DEBUG');
+            
+            // Parse JSON response
+            $result = json_decode($response, true);
+            
+            // Check JSON decode error
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $this->logMessage("Etstur API JSON decode error: " . json_last_error_msg(), 'ERROR');
+                return "NA";
+            }
+            
+            // Check for API errors
+            if (isset($result['error']) || isset($result['errors'])) {
+                $errorMessage = isset($result['error']) ? $result['error'] : json_encode($result['errors']);
+                $this->logMessage("Etstur API error: " . $errorMessage, 'ERROR');
+                return "NA";
+            }
+            
+            // Extract price from response
+            // The response structure may vary, so we need to check different possible locations
+            $price = null;
+            $responseCurrency = $currency;
+            
+            // Check for price in common response structures
+            if (isset($result['price'])) {
+                $price = $result['price'];
+            } elseif (isset($result['data']['price'])) {
+                $price = $result['data']['price'];
+            } elseif (isset($result['minPrice'])) {
+                $price = $result['minPrice'];
+            } elseif (isset($result['data']['minPrice'])) {
+                $price = $result['data']['minPrice'];
+            } elseif (isset($result['rooms']) && is_array($result['rooms']) && count($result['rooms']) > 0) {
+                // Find minimum price from rooms
+                $prices = [];
+                foreach ($result['rooms'] as $room) {
+                    if (isset($room['price'])) {
+                        $prices[] = $room['price'];
+                    } elseif (isset($room['totalPrice'])) {
+                        $prices[] = $room['totalPrice'];
+                    }
+                }
+                if (!empty($prices)) {
+                    $price = min($prices);
+                }
+            } elseif (isset($result['availability']) && is_array($result['availability'])) {
+                // Check availability array
+                $prices = [];
+                foreach ($result['availability'] as $avail) {
+                    if (isset($avail['price'])) {
+                        $prices[] = $avail['price'];
+                    }
+                }
+                if (!empty($prices)) {
+                    $price = min($prices);
+                }
+            }
+            
+            // Check if currency is specified in response
+            if (isset($result['currency'])) {
+                $responseCurrency = $result['currency'];
+            } elseif (isset($result['data']['currency'])) {
+                $responseCurrency = $result['data']['currency'];
+            }
+            
+            if ($price !== null && is_numeric($price) && $price > 0) {
+                $this->logMessage("Etstur API: Found price {$price} {$responseCurrency} for hotel {$hotelId}", 'INFO');
+                
+                // Convert to TRY if needed
+                $tryPrice = $this->convertToTRY($price, $responseCurrency);
+                $this->logMessage("Etstur API: Final price after conversion - {$tryPrice} TRY", 'INFO');
+                
+                return $tryPrice;
+            }
+            
+            $this->logMessage("Etstur API: No valid price found in response for hotel {$hotelId}", 'WARNING');
+            $this->logMessage("Etstur API: Response structure - " . substr($response, 0, 500), 'DEBUG');
+            return "NA";
+            
+        } catch (\Exception $e) {
+            $this->logMessage("Etstur API: Error - " . $e->getMessage(), 'ERROR');
+            return "NA";
+        }
     }
     
 }
