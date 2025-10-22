@@ -44,7 +44,7 @@ class CacheStatsController extends BaseController
         // Find most used channel
         $topChannel = !empty($channelUsage) ? array_key_first($channelUsage) : 'N/A';
         
-        return $this->jsonResponse([
+        return $this->json([
             'status' => 'success',
             'data' => [
                 'cache_hit_rate' => round($hitRate['hit_rate'], 1),
@@ -76,7 +76,7 @@ class CacheStatsController extends BaseController
             $message = "All cache cleared";
         }
         
-        return $this->jsonResponse([
+        return $this->json([
             'status' => $result ? 'success' : 'error',
             'message' => $message
         ]);
