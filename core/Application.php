@@ -70,7 +70,12 @@ class Application
         $method = $this->request->method();
         $uri = $this->request->uri();
         
-        $this->router->dispatch($method, $uri);
+        $response = $this->router->dispatch($method, $uri);
+        
+        // Output response
+        if ($response !== null && $response !== false) {
+            echo $response;
+        }
     }
     
     private function loadRoutes()

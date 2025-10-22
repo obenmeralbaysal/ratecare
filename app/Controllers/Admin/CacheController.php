@@ -15,6 +15,6 @@ class CacheController extends BaseController
      */
     public function statistics()
     {
-        return $this->view('admin/cache/statistics');
+        echo $this->view('admin/cache/statistics');
     }
 }
