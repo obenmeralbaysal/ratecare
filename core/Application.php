@@ -72,9 +72,12 @@ class Application
         
         $response = $this->router->dispatch($method, $uri);
         
-        // Output response
+        // Output response (unless it's already been output by Response object)
         if ($response !== null && $response !== false) {
-            echo $response;
+            // If it's a Response object, it already output via json() or other methods
+            if (!($response instanceof \Core\Response)) {
+                echo $response;
+            }
         }
     }
     

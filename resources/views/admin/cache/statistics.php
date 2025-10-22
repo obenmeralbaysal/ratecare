@@ -1,9 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html class="no-js" lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8">
+    <meta name="csrf-token" content="{{ csrfToken() }}">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
     <title>Cache Statistics | RateCare</title>
+    <link rel="icon" href="{{ asset('assets/images/favicon.ico') }}" type="image/x-icon">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
     <link href="https://fonts.googleapis.com/css?family=Muli:300,400,600,700" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/material-design-iconic-font/2.2.0/css/material-design-iconic-font.min.css" rel="stylesheet">
@@ -12,13 +15,144 @@
         body {
             font-family: 'Muli', sans-serif;
             background: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .page-loader-wrapper {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #2c2c2c;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        
+        .loader {
+            text-align: center;
+            color: #fff;
         }
         
         .navbar {
             background: #ffffff;
+            border: none;
             border-bottom: 1px solid #dee2e6;
-            padding: 15px 0;
+            padding: 0;
+            min-height: 60px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .navbar .container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 60px;
+        }
+        
+        .navbar-brand img {
+            height: 40px;
+        }
+        
+        .navbar .nav {
+            display: flex;
+            align-items: center;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+        
+        .navbar .nav li {
+            display: flex;
+            align-items: center;
+        }
+        
+        .navbar .nav li a {
+            color: #333;
+            text-decoration: none;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .navbar .nav li a:hover {
+            background: rgba(0,0,0,0.05);
+        }
+        
+        .navbar .nav li a i {
+            font-size: 18px;
+        }
+        
+        .h-bars {
+            color: #333;
+            font-size: 18px;
+            padding: 15px;
+            cursor: pointer;
+        }
+        
+        .menu-container {
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .h-menu {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+        }
+        
+        .h-menu li {
+            position: relative;
+        }
+        
+        .h-menu li a {
+            color: #333;
+            text-decoration: none;
+            padding: 15px 20px;
+            display: block;
+            transition: all 0.3s ease;
+        }
+        
+        .h-menu li:hover > a,
+        .h-menu li.active > a {
+            background: #007bff;
+            color: #fff;
+        }
+        
+        .h-menu li .sub-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: #fff;
+            border: 1px solid #dee2e6;
+            min-width: 200px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .h-menu li:hover .sub-menu {
+            display: block;
+        }
+        
+        .h-menu li .sub-menu li a {
+            padding: 10px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            color: #333;
+        }
+        
+        .h-menu li .sub-menu li a:hover {
+            background: #007bff;
+            color: #fff;
         }
         
         .page-header {
@@ -26,6 +160,11 @@
             color: white;
             padding: 40px 0;
             margin-bottom: 30px;
+        }
+        
+        .content {
+            padding: 0 0 30px 0;
+            min-height: calc(100vh - 180px);
         }
         
         .stat-card {
@@ -66,19 +205,77 @@
         }
     </style>
 </head>
-<body>
+<body class="theme-black">
 
-<!-- Navbar -->
+<!-- Page Loader -->
+<div class="page-loader-wrapper" id="pageLoader">
+    <div class="loader">
+        <div class="m-t-30">
+            <img src="<?php echo url('/assets/common/img/rate-care-logo.fw.png'); ?>" width="48" alt="RateCare">
+        </div>
+        <p>Please wait...</p>
+    </div>
+</div>
+
 <nav class="navbar">
     <div class="container">
-        <a class="navbar-brand" href="<?php echo url('/admin/dashboard'); ?>">
-            <strong>RateCare</strong> Cache Statistics
-        </a>
-        <a href="<?php echo url('/admin/dashboard'); ?>" class="btn btn-outline-primary btn-sm">
-            <i class="zmdi zmdi-arrow-left"></i> Back to Dashboard
-        </a>
+        <ul class="nav navbar-nav">
+            <li>
+                <div class="navbar-header">
+                    <a href="javascript:void(0);" class="h-bars">☰</a>
+                    <a class="navbar-brand" href="<?php echo url('/dashboard'); ?>">
+                        <img src="<?php echo url('/assets/common/img/rate-care-logo.fw.png'); ?>" alt="RateCare">
+                    </a>
+                </div>
+            </li>
+            
+            <li class="float-right">
+                <a href="javascript:void(0);" class="js-right-sidebar">
+                    <i class="zmdi zmdi-settings"></i>
+                </a>
+                <a href="<?php echo url('/logout'); ?>" class="mega-menu">
+                    <i class="zmdi zmdi-power"></i>
+                </a>
+            </li>
+        </ul>
     </div>
 </nav>
+
+<div class="menu-container">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <ul class="h-menu">
+                    <li>
+                        <a href="<?php echo url('/dashboard'); ?>">
+                            <i class="zmdi zmdi-home"></i> Dashboard
+                        </a>
+                    </li>
+                    <li>
+                        <a href="javascript:void(0)">Users</a>
+                        <ul class="sub-menu">
+                            <li><a href="<?php echo url('/admin/users'); ?>">All Users</a></li>
+                            <li><a href="<?php echo url('/admin/users/create'); ?>">New User</a></li>
+                            <li><a href="<?php echo url('/admin/users/invite'); ?>">Invite User</a></li>
+                        </ul>
+                    </li>
+                    <li class="active">
+                        <a href="javascript:void(0)">Cache</a>
+                        <ul class="sub-menu">
+                            <li class="active"><a href="<?php echo url('/admin/cache/statistics'); ?>">Statistics</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <a href="<?php echo url('/admin/settings'); ?>">Settings</a>
+                    </li>
+                    <li>
+                        <a href="<?php echo url('/admin/logs'); ?>">Logs</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Page Header -->
 <div class="page-header">
@@ -88,7 +285,7 @@
     </div>
 </div>
 
-<!-- Main Content -->
+<section class="content home">
 <div class="container">
     
     <!-- Overview Stats -->
@@ -208,12 +405,32 @@
     
     <div class="mt-5 mb-5"></div>
 </div>
+</section>
 
 <!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 
 <script>
+// Hide page loader
+$(document).ready(function() {
+    setTimeout(function() {
+        $('#pageLoader').fadeOut();
+    }, 1000);
+});
+
+// CSRF token setup
+$.ajaxSetup({
+    headers: {
+        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+    }
+});
+
+// Mobile menu toggle
+$('.h-bars').click(function() {
+    $('.h-menu').slideToggle();
+});
+
 let hitTypeChart, trendChart, channelChart;
 
 // Load statistics
