@@ -7,6 +7,7 @@ use App\Models\Widget;
 use App\Models\Hotel;
 use App\Helpers\ApiCache;
 use App\Helpers\ApiStatistics;
+use App\Helpers\CircuitBreaker;
 
 /**
  * API Controller for Rate Comparison
@@ -17,6 +18,7 @@ class ApiController extends BaseController
     private $hotelModel;
     private $cache;
     private $statistics;
+    private $circuitBreaker;
     
     public function __construct()
     {
@@ -25,6 +27,7 @@ class ApiController extends BaseController
         // Initialize cache and statistics helpers
         $this->cache = new ApiCache();
         $this->statistics = new ApiStatistics();
+        $this->circuitBreaker = new CircuitBreaker();
         
         // Initialize database connection
         try {
@@ -512,6 +515,13 @@ class ApiController extends BaseController
         ];
         
         $response["data"]["platforms"][] = $data;
+        
+        // Circuit breaker: record success or failure
+        if ($status === "success") {
+            $this->circuitBreaker->recordSuccess($name);
+        } else {
+            $this->circuitBreaker->recordFailure($name);
+        }
     }
     
     /**
@@ -2044,6 +2054,20 @@ class ApiController extends BaseController
     private function requestSinglePlatform(array &$response, array $hotel, string $platform, string $currency, string $checkIn, string $checkOut, int $adult): void
     {
         $this->logMessage("Cache: Requesting single platform - {$platform}", 'DEBUG');
+        
+        // Circuit breaker check
+        if (!$this->circuitBreaker->isAvailable($platform)) {
+            $this->logMessage("Circuit Breaker: Platform {$platform} is OPEN (unavailable), skipping request", 'WARNING');
+            $response['data']['platforms'][] = [
+                'name' => $platform,
+                'displayName' => ucfirst($platform),
+                'status' => 'circuit_open',
+                'price' => 'NA',
+                'url' => 'NA',
+                'message' => 'Service temporarily unavailable (circuit breaker)'
+            ];
+            return;
+        }
         
         switch ($platform) {
             case 'sabeeapp':

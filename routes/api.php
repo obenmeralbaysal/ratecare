@@ -32,6 +32,10 @@ ApiRouter::version('v1')->group(['middleware' => ['throttle']], function() {
     ApiRouter::get('cache/summary', 'CacheStatsController@summary');
     ApiRouter::get('cache/statistics', 'CacheStatsController@statistics');
     
+    // Circuit Breaker (public for monitoring)
+    ApiRouter::get('circuit-breaker/status', 'CacheStatsController@circuitBreakerStatus');
+    ApiRouter::post('circuit-breaker/reset', 'CacheStatsController@circuitBreakerReset');
+    
     // Authentication routes
     ApiRouter::post('auth/login', 'AuthController@login');
     ApiRouter::post('auth/register', 'AuthController@register');

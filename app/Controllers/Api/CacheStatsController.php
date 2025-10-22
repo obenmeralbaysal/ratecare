@@ -170,6 +170,44 @@ class CacheStatsController extends BaseController
     }
     
     /**
+     * Get circuit breaker status
+     * GET /api/v1/circuit-breaker/status
+     */
+    public function circuitBreakerStatus()
+    {
+        $circuitBreaker = new \App\Helpers\CircuitBreaker();
+        $stats = $circuitBreaker->getStatistics();
+        
+        return $this->json([
+            'status' => 'success',
+            'data' => $stats
+        ]);
+    }
+    
+    /**
+     * Reset circuit breaker for platform
+     * POST /api/v1/circuit-breaker/reset
+     */
+    public function circuitBreakerReset()
+    {
+        $platform = $this->input('platform', null);
+        $circuitBreaker = new \App\Helpers\CircuitBreaker();
+        
+        if ($platform) {
+            $circuitBreaker->reset($platform);
+            $message = "Circuit breaker reset for platform: {$platform}";
+        } else {
+            $circuitBreaker->resetAll();
+            $message = "All circuit breakers reset";
+        }
+        
+        return $this->json([
+            'status' => 'success',
+            'message' => $message
+        ]);
+    }
+    
+    /**
      * Clear cache (admin action)
      * POST /api/v1/cache/clear
      */
