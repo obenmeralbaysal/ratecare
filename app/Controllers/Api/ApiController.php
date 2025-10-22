@@ -210,7 +210,7 @@ class ApiController extends BaseController
             case "sabeeapp":
                 if ($hotel['sabee_is_active'] && !empty($hotel['sabee_hotel_id'])) {
                     $price = $this->getSabeePrice($hotel, $currency, $checkIn, $checkOut);
-                    $this->addPlatformToResponse($response, 'sabeeapp', 'SabeeApp', $price, $hotel['sabee_url']);
+                    $this->addPlatformToResponse($response, 'sabeeapp', 'SabeeApp', $price, $hotel['sabee_url'], $currency);
                 }
                 break;
                 
@@ -218,7 +218,7 @@ class ApiController extends BaseController
                 if ($hotel['reseliva_is_active'] && !empty($hotel['reseliva_hotel_id'])) {
                     $price = $this->getReselivaPrice($hotel, $currency, $checkIn, $checkOut);
                     $url = $this->getReselivaUrl($hotel, $currency, $checkIn, $checkOut);
-                    $this->addPlatformToResponse($response, 'reseliva', 'Reseliva', $price, $url);
+                    $this->addPlatformToResponse($response, 'reseliva', 'Reseliva', $price, $url, $currency);
                 }
                 break;
                 
@@ -226,7 +226,7 @@ class ApiController extends BaseController
                 if ($hotel['is_hotelrunner_active'] && !empty($hotel['hotelrunner_url'])) {
                     $result = $this->getHotelRunnerPrice($hotel, $currency, $checkIn, $checkOut);
                     if ($result !== "NA") {
-                        $this->addPlatformToResponse($response, 'hotelrunner', 'HotelRunner', $result['price'], $result['url']);
+                        $this->addPlatformToResponse($response, 'hotelrunner', 'HotelRunner', $result['price'], $result['url'], $currency);
                     }
                 }
                 break;
@@ -251,7 +251,7 @@ class ApiController extends BaseController
             // Only add to response if price is valid
             if ($price !== "NA") {
                 $url = $this->getBookingUrl($hotel, $currency, $checkIn, $checkOut);
-                $this->addPlatformToResponse($response, 'booking', 'Booking.com', $price, $url);
+                $this->addPlatformToResponse($response, 'booking', 'Booking.com', $price, $url, $currency);
                 $this->logMessage("Booking.com: Successfully added to response with price " . $price, 'INFO');
             } else {
                 $this->logMessage("Booking.com: Price not available for " . $hotel['name'] . " - not adding to response", 'WARNING');
@@ -270,7 +270,7 @@ class ApiController extends BaseController
     {
         if ($hotel['hotels_is_active'] && !empty($hotel['hotels_url'])) {
             $price = $this->getHotelsPrice($hotel, $currency, $checkIn, $checkOut);
-            $this->addPlatformToResponse($response, 'hotels', 'Hotels.com', $price, $hotel['hotels_url']);
+            $this->addPlatformToResponse($response, 'hotels', 'Hotels.com', $price, $hotel['hotels_url'], $currency);
         }
     }
     
@@ -281,7 +281,7 @@ class ApiController extends BaseController
     {
         if ($hotel['tatilsepeti_is_active'] && !empty($hotel['tatilsepeti_url'])) {
             $price = $this->getTatilSepetiPrice($hotel, $currency, $checkIn, $checkOut);
-            $this->addPlatformToResponse($response, 'tatilsepeti', 'Tatil Sepeti', $price, $hotel['tatilsepeti_url']);
+            $this->addPlatformToResponse($response, 'tatilsepeti', 'Tatil Sepeti', $price, $hotel['tatilsepeti_url'], $currency);
         }
     }
     
@@ -302,7 +302,7 @@ class ApiController extends BaseController
             // Only add to response if price is valid
             if ($price !== "NA") {
                 $url = $this->getOtelzUrl($hotel, $currency, $checkIn, $checkOut);
-                $this->addPlatformToResponse($response, 'otelz', 'OtelZ', $price, $url);
+                $this->addPlatformToResponse($response, 'otelz', 'OtelZ', $price, $url, $currency);
             } else {
                 $this->logMessage("OtelZ: Price not available for facility ID " . $hotel['otelz_url'], 'INFO');
             }
@@ -317,17 +317,56 @@ class ApiController extends BaseController
         if ($hotel['is_etstur_active'] && !empty($hotel['etstur_hotel_id'])) {
             $result = $this->getEtsturPrice($hotel, $currency, $checkIn, $checkOut);
             if ($result !== "NA") {
-                $this->addPlatformToResponse($response, 'etstur', 'ETSTur', $result['price'], $result['url']);
+                $this->addPlatformToResponse($response, 'etstur', 'ETSTur', $result['price'], $result['url'], $currency);
             }
         }
     }
     
     /**
      * Add platform data to response
+     * 
+     * @param array $response Response array reference
+     * @param string $name Platform name
+     * @param string $displayName Platform display name
+     * @param mixed $priceData Can be: numeric value (assumes TRY), "NA", or ['price' => X, 'currency' => 'EUR']
+     * @param string $url Platform URL
+     * @param string $targetCurrency Target currency for conversion
      */
-    private function addPlatformToResponse(&$response, $name, $displayName, $price, $url)
+    private function addPlatformToResponse(&$response, $name, $displayName, $priceData, $url, $targetCurrency = 'TRY')
     {
+        // Handle both old format (numeric) and new format (array with currency)
+        $price = null;
+        $sourceCurrency = 'TRY'; // Default assume TRY
+        
+        if (is_array($priceData) && isset($priceData['price'])) {
+            // New format: ['price' => X, 'currency' => 'EUR']
+            $price = $priceData['price'];
+            $sourceCurrency = $priceData['currency'] ?? 'TRY';
+        } else {
+            // Old format: just a number or "NA"
+            $price = $priceData;
+            $sourceCurrency = 'TRY';
+        }
+        
         $status = ($price == "NA" || $price == "" || $price === null) ? "failed" : "success";
+        
+        // Smart currency conversion: only convert if source and target currencies differ
+        if ($status === "success" && $sourceCurrency !== $targetCurrency) {
+            // First convert to TRY if not already
+            if ($sourceCurrency !== 'TRY') {
+                $price = $this->convertToTRY($price, $sourceCurrency);
+                $sourceCurrency = 'TRY';
+            }
+            
+            // Then convert from TRY to target currency
+            if ($targetCurrency !== 'TRY') {
+                $price = $this->convertFromTRY($price, $targetCurrency);
+            }
+            
+            $this->logMessage("Platform {$name}: Smart conversion applied - Final price: {$price} {$targetCurrency}", 'DEBUG');
+        } else if ($status === "success") {
+            $this->logMessage("Platform {$name}: No conversion needed - Price already in {$targetCurrency}", 'DEBUG');
+        }
         
         $data = [
             "status" => $status,
@@ -449,14 +488,14 @@ class ApiController extends BaseController
     
     private function getEtsturPrice($hotel, $currency, $checkIn, $checkOut)
     {
-        $price = $this->getEtsturPriceReal($hotel['etstur_hotel_id'], $currency, $checkIn, $checkOut);
+        $result = $this->getEtsturPriceReal($hotel['etstur_hotel_id'], $currency, $checkIn, $checkOut);
         
-        if ($price !== "NA") {
+        if ($result !== "NA" && is_array($result)) {
             // Generate Etstur URL (if they have a direct URL pattern)
             $url = "https://www.etstur.com/otel/" . $hotel['etstur_hotel_id'];
             
             return [
-                'price' => $price,
+                'price' => $result, // Pass the whole array with price and currency
                 'url' => $url
             ];
         }
@@ -758,6 +797,50 @@ class ApiController extends BaseController
         }
         
         return round($tryPrice);
+    }
+    
+    /**
+     * Convert price from TRY to target currency
+     */
+    private function convertFromTRY($tryPrice, $toCurrency)
+    {
+        // If target is TRY, return as is
+        if ($toCurrency === 'TRY' || $toCurrency === 'TL') {
+            return round($tryPrice);
+        }
+        
+        // If price is not numeric or "NA", return as is
+        if (!is_numeric($tryPrice) || $tryPrice === "NA") {
+            return $tryPrice;
+        }
+        
+        $rates = $this->getCurrencyRates();
+        if (!$rates) {
+            $this->logMessage("Currency: Cannot convert {$tryPrice} TRY to {$toCurrency} - rates unavailable", 'WARNING');
+            return $tryPrice; // Return original price if rates unavailable
+        }
+        
+        $convertedPrice = $tryPrice;
+        
+        $cacheInfo = isset($rates['is_fallback']) ? ' (fallback)' : ' (cached)';
+        
+        switch (strtoupper($toCurrency)) {
+            case 'EUR':
+                $convertedPrice = $tryPrice / $rates['eur_buying'];
+                $this->logMessage("Currency: Converted {$tryPrice} TRY to {$convertedPrice} EUR (rate: {$rates['eur_buying']}{$cacheInfo})", 'DEBUG');
+                break;
+                
+            case 'USD':
+                $convertedPrice = $tryPrice / $rates['usd_buying'];
+                $this->logMessage("Currency: Converted {$tryPrice} TRY to {$convertedPrice} USD (rate: {$rates['usd_buying']}{$cacheInfo})", 'DEBUG');
+                break;
+                
+            default:
+                $this->logMessage("Currency: Unknown target currency {$toCurrency}, returning TRY price", 'WARNING');
+                return $tryPrice;
+        }
+        
+        return round($convertedPrice, 2); // Round to 2 decimals for foreign currencies
     }
     
     /**
@@ -1303,11 +1386,12 @@ class ApiController extends BaseController
                 
                 $this->logMessage("Sabee API: Found price {$price} {$sabeeCurrency} for hotel {$sabeeHotelId}", 'INFO');
                 
-                // Convert to TRY
-                $finalPrice = $this->convertToTRY($price, $sabeeCurrency);
-                $this->logMessage("Sabee API: Final price after conversion - {$finalPrice} TRY", 'INFO');
-                
-                return $finalPrice;
+                // Return price with currency info - no conversion needed!
+                // The addPlatformToResponse will handle currency conversion smartly
+                return [
+                    'price' => round($price, 2),
+                    'currency' => $sabeeCurrency
+                ];
             } else {
                 $this->logMessage("Sabee API: Invalid response or no room rates for hotel {$sabeeHotelId}", 'WARNING');
                 return "NA";
@@ -1699,11 +1783,12 @@ class ApiController extends BaseController
             if ($price !== null && is_numeric($price) && $price > 0) {
                 $this->logMessage("Etstur API: Found price {$price} {$responseCurrency} for hotel {$hotelId}", 'INFO');
                 
-                // Convert to TRY if needed
-                $tryPrice = $this->convertToTRY($price, $responseCurrency);
-                $this->logMessage("Etstur API: Final price after conversion - {$tryPrice} TRY", 'INFO');
-                
-                return $tryPrice;
+                // Return price with currency info - no conversion needed!
+                // The addPlatformToResponse will handle currency conversion smartly
+                return [
+                    'price' => round($price, 2),
+                    'currency' => $responseCurrency
+                ];
             }
             
             $this->logMessage("Etstur API: No valid price found in response for hotel {$hotelId}", 'WARNING');
