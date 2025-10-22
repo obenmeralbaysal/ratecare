@@ -29,8 +29,20 @@ class Database
     
     public function connect($config = null)
     {
+        if ($this->connection !== null) {
+            return $this->connection;
+        }
+        
+        // If config is not provided, load from environment
         if ($config === null) {
-            $config = Config::get('database.connections.mysql');
+            $config = [
+                'host' => env('DB_HOST', 'localhost'),
+                'port' => env('DB_PORT', 3306),
+                'database' => env('DB_DATABASE', 'hoteldigilab_new'),
+                'username' => env('DB_USERNAME', 'root'),
+                'password' => env('DB_PASSWORD', ''),
+                'charset' => env('DB_CHARSET', 'utf8mb4')
+            ];
         }
         
         $this->config = $config;

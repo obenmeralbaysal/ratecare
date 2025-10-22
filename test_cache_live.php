@@ -29,6 +29,23 @@ echo "============================================\n";
 echo "RateCare Live Cache Test\n";
 echo "============================================\n\n";
 
+// Initialize database connection
+try {
+    $db = \Core\Database::getInstance();
+    $db->connect([
+        'host' => env('DB_HOST', 'localhost'),
+        'port' => env('DB_PORT', 3306),
+        'database' => env('DB_DATABASE', 'hoteldigilab_new'),
+        'username' => env('DB_USERNAME', 'root'),
+        'password' => env('DB_PASSWORD', ''),
+        'charset' => 'utf8mb4'
+    ]);
+    echo "✓ Database connected\n\n";
+} catch (Exception $e) {
+    echo "❌ Database connection failed: " . $e->getMessage() . "\n";
+    exit(1);
+}
+
 // Initialize helpers
 $cache = new ApiCache();
 $stats = new ApiStatistics();
