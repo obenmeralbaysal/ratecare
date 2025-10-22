@@ -33,6 +33,8 @@ class View
     public function render($template, $data = [])
     {
         $this->data = array_merge($this->data, $data);
+        $this->layout = null; // Reset layout
+        $this->sections = []; // Reset sections
         
         $templateFile = $this->viewPath . str_replace('.', '/', $template) . '.php';
         
@@ -47,6 +49,23 @@ class View
         ob_start();
         include $compiledFile;
         $output = ob_get_clean();
+        
+        // If view extends a layout, render the layout
+        if ($this->layout) {
+            $layoutFile = $this->viewPath . str_replace('.', '/', $this->layout) . '.php';
+            
+            if (!file_exists($layoutFile)) {
+                throw new \Exception("Layout not found: {$this->layout}");
+            }
+            
+            $compiledLayout = $this->compile($layoutFile, $this->layout);
+            
+            extract($this->data);
+            
+            ob_start();
+            include $compiledLayout;
+            $output = ob_get_clean();
+        }
         
         return $output;
     }
