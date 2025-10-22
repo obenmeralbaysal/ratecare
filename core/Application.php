@@ -88,13 +88,14 @@ class Application
             
             // Transfer API routes from ApiRouter to main Router
             $apiRoutes = \Core\ApiRouter::getRoutes();
-            foreach ($apiRoutes as $method => $routes) {
-                foreach ($routes as $uri => $handler) {
-                    // Add API route to main router using public methods
-                    $methodLower = strtolower($method);
-                    if (method_exists($this->router, $methodLower)) {
-                        $this->router->$methodLower($uri, $handler);
-                    }
+            foreach ($apiRoutes as $route) {
+                $method = strtolower($route['method']);
+                $uri = $route['path'];
+                $handler = $route['handler'];
+                
+                // Add API route to main router using public methods
+                if (method_exists($this->router, $method)) {
+                    $this->router->$method($uri, $handler);
                 }
             }
         }
