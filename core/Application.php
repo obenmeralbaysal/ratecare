@@ -93,6 +93,15 @@ class Application
                 $uri = $route['path'];
                 $handler = $route['handler'];
                 
+                // Convert handler to full namespace (for API controllers)
+                if (is_string($handler) && strpos($handler, '@') !== false) {
+                    list($class, $methodName) = explode('@', $handler);
+                    // If class doesn't have namespace, add App\Controllers\Api
+                    if (strpos($class, '\\') === false) {
+                        $handler = "App\\Controllers\\Api\\{$class}@{$methodName}";
+                    }
+                }
+                
                 // Add API route to main router using public methods
                 if (method_exists($this->router, $method)) {
                     $this->router->$method($uri, $handler);
