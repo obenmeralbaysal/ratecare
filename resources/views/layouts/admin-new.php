@@ -41,7 +41,7 @@
         }
         
         .navbar {
-            background: #ffffff;
+            background: #f8f9fa;
             border: none;
             border-bottom: 1px solid #dee2e6;
             padding: 0;
@@ -88,13 +88,6 @@
         
         .navbar .nav li a i {
             font-size: 18px;
-        }
-        
-        .h-bars {
-            color: #333;
-            font-size: 18px;
-            padding: 15px;
-            cursor: pointer;
         }
         
         .menu-container {
@@ -219,7 +212,6 @@
         <ul class="nav navbar-nav">
             <li>
                 <div class="navbar-header">
-                    <a href="javascript:void(0);" class="h-bars">☰</a>
                     <a class="navbar-brand" href="<?php echo url('/dashboard'); ?>">
                         <img src="<?php echo url('/assets/common/img/rate-care-logo.fw.png'); ?>" alt="RateCare">
                     </a>
@@ -227,11 +219,8 @@
             </li>
             
             <li class="float-right">
-                <a href="javascript:void(0);" class="js-right-sidebar">
-                    <i class="zmdi zmdi-settings"></i>
-                </a>
                 <a href="<?php echo url('/logout'); ?>" class="mega-menu">
-                    <i class="zmdi zmdi-power"></i>
+                    <i class="zmdi zmdi-power"></i> Logout
                 </a>
             </li>
         </ul>
@@ -301,9 +290,11 @@ $.ajaxSetup({
     }
 });
 
-// Mobile menu toggle
-$('.h-bars').click(function() {
-    $('.h-menu').toggleClass('show');
+// Mobile responsive: Show menu on mobile
+$(window).resize(function() {
+    if ($(window).width() > 768) {
+        $('.h-menu').removeClass('show');
+    }
 });
 </script>
 
