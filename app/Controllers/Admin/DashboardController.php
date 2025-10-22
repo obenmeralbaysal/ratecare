@@ -36,7 +36,7 @@ class DashboardController extends BaseController
      */
     public function index()
     {
-        echo $this->view('admin.dashboard.index', [
+        echo $this->view('admin.dashboard.index-new', [
             'title' => 'Admin Dashboard'
         ]);
     }
