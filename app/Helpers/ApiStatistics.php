@@ -12,7 +12,7 @@ use PDO;
 class ApiStatistics
 {
     private $db;
-    private $pdo;
+    public $pdo;
     
     public function __construct()
     {

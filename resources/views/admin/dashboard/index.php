@@ -293,6 +293,11 @@
                         <h3 class="m-t-10 mb-0" id="cacheHitRate">--%</h3>
                         <h6 class="m-t-10">CACHE HIT RATE</h6>
                         <small style="opacity: 0.9;">Last 24 hours</small>
+                        <div class="mt-3">
+                            <a href="<?php echo url('/admin/cache/statistics'); ?>" class="btn btn-sm btn-light">
+                                <i class="zmdi zmdi-chart"></i> View Statistics
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -27,6 +27,9 @@ $router->group(['middleware' => ['AuthMiddleware']], function($router) {
     $router->get('/admin/logs', 'Admin\LogViewerController@index');
     $router->get('/admin/logs/download', 'Admin\LogViewerController@download');
     $router->get('/admin/logs/clear', 'Admin\LogViewerController@clear');
+    
+    // Cache Statistics
+    $router->get('/admin/cache/statistics', 'Admin\CacheController@statistics');
 });
 
 // API Routes (Public - No authentication required)

@@ -30,6 +30,7 @@ ApiRouter::version('v1')->group(['middleware' => ['throttle']], function() {
     
     // Cache statistics (public for dashboard)
     ApiRouter::get('cache/summary', 'CacheStatsController@summary');
+    ApiRouter::get('cache/statistics', 'CacheStatsController@statistics');
     
     // Authentication routes
     ApiRouter::post('auth/login', 'AuthController@login');
