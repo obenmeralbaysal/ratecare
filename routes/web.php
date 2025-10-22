@@ -30,6 +30,10 @@ $router->group(['middleware' => ['AuthMiddleware']], function($router) {
     
     // Cache Statistics
     $router->get('/admin/cache/statistics', 'Admin\CacheController@statistics');
+    
+    // Settings
+    $router->get('/admin/settings', 'Admin\Settings\SettingsController@index');
+    $router->post('/admin/settings/update', 'Admin\Settings\SettingsController@update');
 });
 
 // API Routes (Public - No authentication required)
