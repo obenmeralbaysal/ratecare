@@ -1731,6 +1731,7 @@ class ApiController extends BaseController
             }
             
             $this->logMessage("Etstur API: Response received (" . strlen($response) . " bytes)", 'DEBUG');
+            $this->logMessage("Etstur API: Response structure - " . $response, 'DEBUG');
             
             // Parse JSON response
             $result = json_decode($response, true);
@@ -1753,8 +1754,14 @@ class ApiController extends BaseController
             $price = null;
             $responseCurrency = $currency;
             
-            // Check for price in common response structures
-            if (isset($result['price'])) {
+            // Check for price in Etstur response structure (totalRate, baseRate)
+            if (isset($result['totalRate'])) {
+                $price = $result['totalRate'];
+                $this->logMessage("Etstur API: Using totalRate - " . $price, 'DEBUG');
+            } elseif (isset($result['baseRate'])) {
+                $price = $result['baseRate'];
+                $this->logMessage("Etstur API: Using baseRate - " . $price, 'DEBUG');
+            } elseif (isset($result['price'])) {
                 $price = $result['price'];
             } elseif (isset($result['data']['price'])) {
                 $price = $result['data']['price'];
@@ -1766,7 +1773,11 @@ class ApiController extends BaseController
                 // Find minimum price from rooms
                 $prices = [];
                 foreach ($result['rooms'] as $room) {
-                    if (isset($room['price'])) {
+                    if (isset($room['totalRate'])) {
+                        $prices[] = $room['totalRate'];
+                    } elseif (isset($room['baseRate'])) {
+                        $prices[] = $room['baseRate'];
+                    } elseif (isset($room['price'])) {
                         $prices[] = $room['price'];
                     } elseif (isset($room['totalPrice'])) {
                         $prices[] = $room['totalPrice'];
@@ -1779,7 +1790,9 @@ class ApiController extends BaseController
                 // Check availability array
                 $prices = [];
                 foreach ($result['availability'] as $avail) {
-                    if (isset($avail['price'])) {
+                    if (isset($avail['totalRate'])) {
+                        $prices[] = $avail['totalRate'];
+                    } elseif (isset($avail['price'])) {
                         $prices[] = $avail['price'];
                     }
                 }
