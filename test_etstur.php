@@ -3,7 +3,23 @@
  * Test Etstur API Integration
  */
 
-require_once __DIR__ . '/bootstrap.php';
+// Define application root
+define('APP_ROOT', __DIR__);
+
+// Load autoloader
+require_once APP_ROOT . '/core/Autoloader.php';
+
+// Register autoloader
+$autoloader = new \Core\Autoloader();
+$autoloader->addNamespace('Core', APP_ROOT . '/core');
+$autoloader->addNamespace('App', APP_ROOT . '/app');
+$autoloader->register();
+
+// Load environment variables
+\Core\Environment::load(APP_ROOT . '/.env');
+
+// Load helper functions
+require_once APP_ROOT . '/app/Helpers/functions.php';
 
 use App\Controllers\Api\ApiController;
 
