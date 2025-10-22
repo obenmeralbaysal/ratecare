@@ -60,7 +60,7 @@ class UsersController extends BaseController
         // Get users with pagination
         $result = $this->getUsersList($search, $page, $perPage);
         
-        echo $this->view('admin.users.index', [
+        echo $this->view('admin.users.index-new', [
             'title' => 'Users Management',
             'users' => $result['users'],
             'search' => $search,
@@ -160,7 +160,7 @@ class UsersController extends BaseController
      */
     public function create()
     {
-        echo $this->view('admin.users.create', [
+        echo $this->view('admin.users.create-new', [
             'title' => 'Create New User'
         ]);
     }
@@ -170,7 +170,7 @@ class UsersController extends BaseController
      */
     public function invite()
     {
-        echo $this->view('admin.users.invite', [
+        echo $this->view('admin.users.invite-new', [
             'title' => 'Invite User'
         ]);
     }

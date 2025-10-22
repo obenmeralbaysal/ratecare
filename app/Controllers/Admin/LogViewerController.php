@@ -37,7 +37,7 @@ class LogViewerController extends BaseController
             $totalLines = substr_count($logContent, "\n");
         }
         
-        echo $this->view('admin.logs.index', [
+        echo $this->view('admin.logs.index-new', [
             'title' => 'Log Viewer',
             'logFiles' => $logFiles,
             'selectedFile' => $selectedFile,

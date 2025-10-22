@@ -41,12 +41,12 @@
         }
         
         .navbar {
-            background: #f8f9fa;
+            background: #2c2c2c;
             border: none;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid #1a1a1a;
             padding: 0;
             min-height: 60px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
         
         .navbar .container {
@@ -75,7 +75,7 @@
         }
         
         .navbar .nav li a {
-            color: #333;
+            color: #ffffff;
             text-decoration: none;
             padding: 15px;
             display: flex;
@@ -83,11 +83,12 @@
         }
         
         .navbar .nav li a:hover {
-            background: rgba(0,0,0,0.05);
+            background: rgba(255,255,255,0.1);
         }
         
         .navbar .nav li a i {
             font-size: 18px;
+            margin-right: 5px;
         }
         
         .menu-container {

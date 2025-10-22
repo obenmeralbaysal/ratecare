@@ -52,7 +52,7 @@ class HotelsController extends BaseController
             // Get user's hotel
             $hotel = $this->getHotelByUserId($userId);
             
-            echo $this->view('admin.hotels.edit', [
+            echo $this->view('admin.hotels.edit-new', [
                 'title' => 'Edit Property - ' . $user['namesurname'],
                 'user' => $user,
                 'hotel' => $hotel
