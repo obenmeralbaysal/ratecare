@@ -285,6 +285,41 @@
 <section class="content home">
     <div class="container">
         <div class="row clearfix">
+              <!-- Cache Statistics Cards -->
+            <div class="col-lg-4 col-md-6 col-sm-12 text-center">
+                <div class="card tasks_report cache-stats-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff;">
+                    <div class="body">
+                        <i class="zmdi zmdi-hc-4x zmdi-flash"></i>
+                        <h3 class="m-t-10 mb-0" id="cacheHitRate">--%</h3>
+                        <h6 class="m-t-10">CACHE HIT RATE</h6>
+                        <small style="opacity: 0.9;">Last 24 hours</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6 col-sm-12 text-center">
+                <div class="card tasks_report cache-stats-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: #fff;">
+                    <div class="body">
+                        <i class="zmdi zmdi-hc-4x zmdi-chart"></i>
+                        <h3 class="m-t-10 mb-0" id="totalRequests">--</h3>
+                        <h6 class="m-t-10">TOTAL REQUESTS</h6>
+                        <small style="opacity: 0.9;">
+                            <span id="fullHits">0</span> full, 
+                            <span id="partialHits">0</span> partial, 
+                            <span id="misses">0</span> miss
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6 col-sm-12 text-center">
+                <div class="card tasks_report cache-stats-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #fff;">
+                    <div class="body">
+                        <i class="zmdi zmdi-hc-4x zmdi-star"></i>
+                        <h3 class="m-t-10 mb-0" id="topChannel">--</h3>
+                        <h6 class="m-t-10">TOP CHANNEL</h6>
+                        <small style="opacity: 0.9;">Most requested platform</small>
+                    </div>
+                </div>
+            </div>
             <div class="col-lg-4 col-md-6 col-sm-12 text-center">
                 <div class="card tasks_report">
                     <a href="{{ url('/admin/users') }}">
@@ -326,41 +361,7 @@
                 </div>
             </div>
             
-            <!-- Cache Statistics Cards -->
-            <div class="col-lg-4 col-md-6 col-sm-12 text-center">
-                <div class="card tasks_report cache-stats-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff;">
-                    <div class="body">
-                        <i class="zmdi zmdi-hc-4x zmdi-flash"></i>
-                        <h3 class="m-t-10 mb-0" id="cacheHitRate">--%</h3>
-                        <h6 class="m-t-10">CACHE HIT RATE</h6>
-                        <small style="opacity: 0.9;">Last 24 hours</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4 col-md-6 col-sm-12 text-center">
-                <div class="card tasks_report cache-stats-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: #fff;">
-                    <div class="body">
-                        <i class="zmdi zmdi-hc-4x zmdi-chart"></i>
-                        <h3 class="m-t-10 mb-0" id="totalRequests">--</h3>
-                        <h6 class="m-t-10">TOTAL REQUESTS</h6>
-                        <small style="opacity: 0.9;">
-                            <span id="fullHits">0</span> full, 
-                            <span id="partialHits">0</span> partial, 
-                            <span id="misses">0</span> miss
-                        </small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4 col-md-6 col-sm-12 text-center">
-                <div class="card tasks_report cache-stats-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #fff;">
-                    <div class="body">
-                        <i class="zmdi zmdi-hc-4x zmdi-star"></i>
-                        <h3 class="m-t-10 mb-0" id="topChannel">--</h3>
-                        <h6 class="m-t-10">TOP CHANNEL</h6>
-                        <small style="opacity: 0.9;">Most requested platform</small>
-                    </div>
-                </div>
-            </div>
+          
             
             <div class="col-lg-4 col-md-6 col-sm-12 text-center">
                 <div class="card tasks_report">
@@ -402,7 +403,7 @@
     // Load cache statistics
     function loadCacheStats() {
         $.ajax({
-            url: '{{ url("/api/cache/summary") }}',
+            url: '<?php echo url("/api/v1/cache/summary"); ?>',
             method: 'GET',
             success: function(response) {
                 if (response.status === 'success' && response.data) {

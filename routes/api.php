@@ -29,7 +29,7 @@ ApiRouter::version('v1')->group(['middleware' => ['throttle']], function() {
     ApiRouter::get('rates/compare', 'RateController@compare');
     
     // Cache statistics (public for dashboard)
-    ApiRouter::get('cache/summary', 'Admin\CacheStatsController@summary');
+    ApiRouter::get('cache/summary', 'CacheStatsController@summary');
     
     // Authentication routes
     ApiRouter::post('auth/login', 'AuthController@login');
