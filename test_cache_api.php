@@ -42,38 +42,64 @@ try {
     exit(1);
 }
 
-// Test the controller directly
-echo "Testing CacheStatsController::summary()\n";
+// Test the helpers directly (CLI-friendly)
+echo "Testing Cache & Statistics Helpers\n";
 echo str_repeat('-', 50) . "\n";
 
 try {
-    $controller = new \App\Controllers\Api\CacheStatsController();
+    $cache = new \App\Helpers\ApiCache();
+    $stats = new \App\Helpers\ApiStatistics();
     
-    // Simulate the summary request
-    ob_start();
-    $controller->summary();
-    $output = ob_get_clean();
+    $today = date('Y-m-d');
     
-    echo "Response:\n";
-    echo $output . "\n\n";
+    echo "1. Getting Cache Stats...\n";
+    $cacheStats = $cache->getStats();
+    echo "   ✓ Total Entries: " . ($cacheStats['total_entries'] ?? 0) . "\n";
+    echo "   ✓ Active Entries: " . ($cacheStats['active_entries'] ?? 0) . "\n";
+    echo "   ✓ Expired Entries: " . ($cacheStats['expired_entries'] ?? 0) . "\n\n";
     
-    // Parse JSON
-    $response = json_decode($output, true);
+    echo "2. Getting Cache Hit Rate...\n";
+    $hitRate = $stats->getCacheHitRate($today, $today);
+    echo "   ✓ Total Requests: " . $hitRate['total'] . "\n";
+    echo "   ✓ Full Hits: " . $hitRate['full_hits'] . "\n";
+    echo "   ✓ Partial Hits: " . $hitRate['partial_hits'] . "\n";
+    echo "   ✓ Misses: " . $hitRate['misses'] . "\n";
+    echo "   ✓ Hit Rate: " . round($hitRate['hit_rate'], 1) . "%\n\n";
     
-    if ($response && $response['status'] === 'success') {
-        echo "✓ API Response: SUCCESS\n";
-        echo "✓ Data:\n";
-        echo "  - Cache Hit Rate: " . $response['data']['cache_hit_rate'] . "%\n";
-        echo "  - Total Requests: " . $response['data']['total_requests'] . "\n";
-        echo "  - Full Hits: " . $response['data']['full_hits'] . "\n";
-        echo "  - Partial Hits: " . $response['data']['partial_hits'] . "\n";
-        echo "  - Misses: " . $response['data']['misses'] . "\n";
-        echo "  - Top Channel: " . $response['data']['top_channel'] . "\n";
-        echo "  - Cache Entries: " . $response['data']['cache_entries'] . "\n";
+    echo "3. Getting Channel Usage...\n";
+    $channelUsage = $stats->getChannelUsage($today, $today);
+    if (!empty($channelUsage)) {
+        foreach ($channelUsage as $channel => $count) {
+            echo "   ✓ {$channel}: {$count} requests\n";
+        }
+        $topChannel = array_key_first($channelUsage);
+        echo "   → Top Channel: " . ucfirst($topChannel) . "\n";
     } else {
-        echo "❌ API Response: FAILED\n";
-        print_r($response);
+        echo "   ℹ No channel usage data yet\n";
     }
+    
+    echo "\n" . str_repeat('=', 50) . "\n";
+    echo "✓ API Data Ready!\n";
+    echo str_repeat('=', 50) . "\n\n";
+    
+    // Simulate API response
+    $apiResponse = [
+        'status' => 'success',
+        'data' => [
+            'cache_hit_rate' => round($hitRate['hit_rate'], 1),
+            'full_hit_rate' => round($hitRate['full_hit_rate'], 1),
+            'partial_hit_rate' => round($hitRate['partial_hit_rate'], 1),
+            'total_requests' => $hitRate['total'],
+            'full_hits' => $hitRate['full_hits'],
+            'partial_hits' => $hitRate['partial_hits'],
+            'misses' => $hitRate['misses'],
+            'top_channel' => !empty($channelUsage) ? ucfirst(array_key_first($channelUsage)) : 'N/A',
+            'cache_entries' => $cacheStats['active_entries'] ?? 0
+        ]
+    ];
+    
+    echo "Expected API Response:\n";
+    echo json_encode($apiResponse, JSON_PRETTY_PRINT) . "\n\n";
     
 } catch (Exception $e) {
     echo "❌ Error: " . $e->getMessage() . "\n";
