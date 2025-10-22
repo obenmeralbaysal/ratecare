@@ -5,6 +5,8 @@ namespace App\Controllers\Api;
 use App\Controllers\BaseController;
 use App\Models\Widget;
 use App\Models\Hotel;
+use App\Helpers\ApiCache;
+use App\Helpers\ApiStatistics;
 
 /**
  * API Controller for Rate Comparison
@@ -13,10 +15,16 @@ class ApiController extends BaseController
 {
     private $widgetModel;
     private $hotelModel;
+    private $cache;
+    private $statistics;
     
     public function __construct()
     {
         parent::__construct();
+        
+        // Initialize cache and statistics helpers
+        $this->cache = new ApiCache();
+        $this->statistics = new ApiStatistics();
         
         // Initialize database connection
         try {
@@ -44,6 +52,9 @@ class ApiController extends BaseController
     public function getRequest($widgetCode)
     {
         try {
+            // Start timing for statistics
+            $startTime = microtime(true);
+            
             // Log API request
             $this->logMessage("API Request started for widget: " . $widgetCode, 'INFO');
             
@@ -84,31 +95,141 @@ class ApiController extends BaseController
             
             $this->logMessage("Hotel found: " . $hotel['name'] . " (ID: " . $hotel['id'] . ")", 'INFO');
             
-            // Initialize response
-            $response = [
-                "status" => "success",
-                "data" => [
-                    "platforms" => [],
-                    "request_info" => [
-                        "currency" => $currency,
-                        "checkin" => $checkIn,
-                        "checkout" => $checkOut,
-                        "adult" => $adult,
-                        "child" => $child,
-                        "infant" => $infant,
-                        "widget_code" => $widgetCode,
-                        "hotel_name" => $hotel['name']
-                    ]
-                ],
+            // Prepare request parameters for cache
+            $params = [
+                'currency' => $currency,
+                'checkin' => $checkIn,
+                'checkout' => $checkOut,
+                'adult' => $adult,
+                'child' => $child,
+                'infant' => $infant
             ];
             
-            // Get prices from different platforms
-            $this->addDefaultIbePlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
-            $this->addBookingPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
-            $this->addHotelsPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
-            $this->addTatilSepetiPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
-            $this->addOtelzPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
-            $this->addEtsturPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
+            // Generate cache key
+            $cacheKey = $this->cache->generateCacheKey($widgetCode, $params);
+            $this->logMessage("Cache: Generated key - {$cacheKey}", 'DEBUG');
+            
+            // Try to get from cache
+            $cachedData = $this->cache->get($cacheKey);
+            $cacheHitType = 'miss';
+            $cachedPlatforms = [];
+            $requestedPlatforms = [];
+            $updatedPlatforms = [];
+            
+            if ($cachedData) {
+                $this->logMessage("Cache: HIT - Data found in cache", 'INFO');
+                
+                // Check for missing/failed platforms (Partial Cache Strategy)
+                $missingPlatforms = $this->getMissingPlatforms($cachedData, $hotel);
+                
+                if (empty($missingPlatforms)) {
+                    // FULL CACHE HIT - All platforms are good!
+                    $cacheHitType = 'full';
+                    $cachedPlatforms = $this->getActivePlatformNames($cachedData);
+                    $this->logMessage("Cache: FULL HIT - All platforms valid, returning cached data", 'INFO');
+                    
+                    // Log statistics
+                    $responseTime = round((microtime(true) - $startTime) * 1000);
+                    $this->statistics->logRequest($widgetCode, $params, $cacheHitType, $cachedPlatforms, null, null, $responseTime);
+                    
+                    // Add cache info to response
+                    $cachedData['data']['cache_info'] = [
+                        'hit_type' => 'full',
+                        'cached_platforms' => $cachedPlatforms,
+                        'response_time_ms' => $responseTime
+                    ];
+                    
+                    return $this->jsonResponse($cachedData);
+                } else {
+                    // PARTIAL CACHE HIT - Some platforms need refresh
+                    $cacheHitType = 'partial';
+                    $cachedPlatforms = array_diff($this->getActivePlatformNames($cachedData), $missingPlatforms);
+                    $requestedPlatforms = $missingPlatforms;
+                    
+                    $this->logMessage("Cache: PARTIAL HIT - Missing/failed platforms: " . implode(', ', $missingPlatforms), 'INFO');
+                    
+                    // Initialize response from cache
+                    $response = $cachedData;
+                    
+                    // Request only missing platforms
+                    foreach ($missingPlatforms as $platform) {
+                        $this->requestSinglePlatform($response, $hotel, $platform, $currency, $checkIn, $checkOut, $adult);
+                    }
+                    
+                    // Update cache with new data
+                    $this->cache->set($cacheKey, $response, $widgetCode, $params);
+                    
+                    // Extend cache TTL
+                    $this->cache->extendCacheExpiry($cacheKey, 10);
+                    
+                    // Track which platforms were updated successfully
+                    $updatedPlatforms = $this->getUpdatedPlatforms($missingPlatforms, $response);
+                    
+                    $this->logMessage("Cache: PARTIAL UPDATE - Updated platforms: " . implode(', ', $updatedPlatforms), 'INFO');
+                }
+            } else {
+                // CACHE MISS - Get all platforms
+                $cacheHitType = 'miss';
+                $this->logMessage("Cache: MISS - No cache found, fetching all platforms", 'INFO');
+                
+                // Initialize response
+                $response = [
+                    "status" => "success",
+                    "data" => [
+                        "platforms" => [],
+                        "request_info" => [
+                            "currency" => $currency,
+                            "checkin" => $checkIn,
+                            "checkout" => $checkOut,
+                            "adult" => $adult,
+                            "child" => $child,
+                            "infant" => $infant,
+                            "widget_code" => $widgetCode,
+                            "hotel_name" => $hotel['name']
+                        ]
+                    ],
+                ];
+                
+                // Get prices from ALL platforms
+                $this->addDefaultIbePlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
+                $this->addBookingPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
+                $this->addHotelsPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
+                $this->addTatilSepetiPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
+                $this->addOtelzPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
+                $this->addEtsturPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
+                
+                // Track requested platforms
+                $requestedPlatforms = $this->getActivePlatformNames($response);
+                
+                // Save to cache
+                $this->cache->set($cacheKey, $response, $widgetCode, $params);
+                $this->logMessage("Cache: Data cached successfully", 'INFO');
+            }
+            
+            // Calculate response time
+            $responseTime = round((microtime(true) - $startTime) * 1000);
+            
+            // Log statistics
+            $this->statistics->logRequest(
+                $widgetCode,
+                $params,
+                $cacheHitType,
+                !empty($cachedPlatforms) ? $cachedPlatforms : null,
+                !empty($requestedPlatforms) ? $requestedPlatforms : null,
+                !empty($updatedPlatforms) ? $updatedPlatforms : null,
+                $responseTime
+            );
+            
+            // Add cache info to response
+            $response['data']['cache_info'] = [
+                'hit_type' => $cacheHitType,
+                'cached_platforms' => $cachedPlatforms,
+                'requested_platforms' => $requestedPlatforms,
+                'updated_platforms' => $updatedPlatforms,
+                'response_time_ms' => $responseTime
+            ];
+            
+            $this->logMessage("API Request completed in {$responseTime}ms - Cache: {$cacheHitType}", 'INFO');
             
             return $this->jsonResponse($response);
             
@@ -1827,6 +1948,147 @@ class ApiController extends BaseController
             $this->logMessage("Etstur API: Error - " . $e->getMessage(), 'ERROR');
             return "NA";
         }
+    }
+    
+    /**
+     * Get missing/failed platforms from cached data (Partial Cache Strategy)
+     * 
+     * @param array $cachedData Cached response data
+     * @param array $hotel Hotel configuration
+     * @return array Array of platform names that need refresh
+     */
+    private function getMissingPlatforms(array $cachedData, array $hotel): array
+    {
+        $missing = [];
+        $allPlatforms = [
+            'sabeeapp' => ['sabee_is_active', 'sabee_hotel_id'],
+            'reseliva' => ['reseliva_is_active', 'reseliva_hotel_id'],
+            'hotelrunner' => ['is_hotelrunner_active', 'hotelrunner_url'],
+            'booking' => ['booking_is_active', 'booking_url'],
+            'hotels' => ['hotels_is_active', 'hotels_url'],
+            'tatilsepeti' => ['tatilsepeti_is_active', 'tatilsepeti_url'],
+            'otelz' => ['otelz_is_active', 'otelz_url'],
+            'etstur' => ['is_etstur_active', 'etstur_hotel_id']
+        ];
+        
+        foreach ($allPlatforms as $platformName => $config) {
+            [$activeField, $idField] = $config;
+            
+            // Skip if platform not active in hotel
+            if (empty($hotel[$activeField]) || empty($hotel[$idField])) {
+                continue;
+            }
+            
+            // Check if platform exists in cache
+            $platformData = $this->findPlatformInCache($cachedData, $platformName);
+            
+            // Platform is missing or failed/NA
+            if (!$platformData || 
+                $platformData['status'] === 'failed' || 
+                $platformData['price'] === 'NA' ||
+                $platformData['price'] === null) {
+                $missing[] = $platformName;
+            }
+        }
+        
+        return $missing;
+    }
+    
+    /**
+     * Find platform data in cached response
+     */
+    private function findPlatformInCache(array $cachedData, string $platformName): ?array
+    {
+        if (!isset($cachedData['data']['platforms'])) {
+            return null;
+        }
+        
+        foreach ($cachedData['data']['platforms'] as $platform) {
+            if ($platform['name'] === $platformName) {
+                return $platform;
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Get active platform names from response
+     */
+    private function getActivePlatformNames(array $response): array
+    {
+        $names = [];
+        
+        if (isset($response['data']['platforms'])) {
+            foreach ($response['data']['platforms'] as $platform) {
+                if (isset($platform['name'])) {
+                    $names[] = $platform['name'];
+                }
+            }
+        }
+        
+        return $names;
+    }
+    
+    /**
+     * Request single platform (for partial cache update)
+     */
+    private function requestSinglePlatform(array &$response, array $hotel, string $platform, string $currency, string $checkIn, string $checkOut, int $adult): void
+    {
+        $this->logMessage("Cache: Requesting single platform - {$platform}", 'DEBUG');
+        
+        switch ($platform) {
+            case 'sabeeapp':
+            case 'reseliva':
+            case 'hotelrunner':
+                $this->addDefaultIbePlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
+                break;
+                
+            case 'booking':
+                $this->addBookingPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
+                break;
+                
+            case 'hotels':
+                $this->addHotelsPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
+                break;
+                
+            case 'tatilsepeti':
+                $this->addTatilSepetiPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
+                break;
+                
+            case 'otelz':
+                $this->addOtelzPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
+                break;
+                
+            case 'etstur':
+                $this->addEtsturPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
+                break;
+                
+            default:
+                $this->logMessage("Cache: Unknown platform - {$platform}", 'WARNING');
+        }
+    }
+    
+    /**
+     * Get platforms that were successfully updated
+     */
+    private function getUpdatedPlatforms(array $requestedPlatforms, array $response): array
+    {
+        $updated = [];
+        
+        foreach ($requestedPlatforms as $platformName) {
+            $platformData = $this->findPlatformInCache($response, $platformName);
+            
+            // Platform was successfully updated if it exists and has valid price
+            if ($platformData && 
+                $platformData['status'] === 'success' && 
+                $platformData['price'] !== 'NA' &&
+                $platformData['price'] !== null) {
+                $updated[] = $platformName;
+            }
+        }
+        
+        return $updated;
     }
     
 }
