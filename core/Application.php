@@ -85,6 +85,18 @@ class Application
         $apiRoutesFile = __DIR__ . '/../routes/api.php';
         if (file_exists($apiRoutesFile)) {
             require $apiRoutesFile;
+            
+            // Transfer API routes from ApiRouter to main Router
+            $apiRoutes = \Core\ApiRouter::getRoutes();
+            foreach ($apiRoutes as $method => $routes) {
+                foreach ($routes as $uri => $handler) {
+                    // Add API route to main router using public methods
+                    $methodLower = strtolower($method);
+                    if (method_exists($this->router, $methodLower)) {
+                        $this->router->$methodLower($uri, $handler);
+                    }
+                }
+            }
         }
     }
 }
