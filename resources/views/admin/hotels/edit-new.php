@@ -30,7 +30,7 @@
     <div class="col-lg-12 col-md-12 col-sm-12">
         <div class="card p-4">
             <div class="body">
-                <form method="POST" action="<?php echo url('/admin/hotels/update/' . ($hotel['id'] ?? '')); ?>">
+                <form method="POST" action="<?php echo url('/admin/hotels/update/' . ($hotel['id'] ?? '')); ?>" id="editHotelForm" onsubmit="return handleEditHotel(event)">
                     <?php echo csrfField(); ?>
 
                     <div class="row">
@@ -288,6 +288,49 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+function handleEditHotel(event) {
+    event.preventDefault();
+    
+    const form = document.getElementById('editHotelForm');
+    const formData = new FormData(form);
+    
+    $.ajax({
+        url: $(form).attr('action'),
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                toastr.success(response.message || 'Property updated successfully!');
+                setTimeout(function() {
+                    window.location.href = '<?php echo url("/admin/users"); ?>';
+                }, 1500);
+            } else {
+                toastr.error(response.message || 'Failed to update property');
+            }
+        },
+        error: function(xhr) {
+            const response = xhr.responseJSON;
+            if (response && response.errors) {
+                Object.values(response.errors).forEach(function(error) {
+                    toastr.error(error[0]);
+                });
+            } else if (response && response.message) {
+                toastr.error(response.message);
+            } else {
+                toastr.error('An error occurred. Please try again.');
+            }
+        }
+    });
+    
+    return false;
+}
+</script>
 @endsection
 
 @section('styles')

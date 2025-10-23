@@ -32,7 +32,7 @@
     <div class="col-lg-12 col-md-12 col-sm-12">
         <div class="card p-4">
             <div class="body">
-                <form method="POST" action="<?php echo url('/admin/users/invite'); ?>">
+                <form method="POST" action="<?php echo url('/admin/users/invite'); ?>" id="inviteUserForm" onsubmit="return handleInviteUser(event)">
                     <?php echo csrfField(); ?>
                     
                     <h2 class="card-inside-title">Name Surname</h2>
@@ -62,6 +62,50 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+function handleInviteUser(event) {
+    event.preventDefault();
+    
+    const form = document.getElementById('inviteUserForm');
+    const formData = new FormData(form);
+    
+    $.ajax({
+        url: $(form).attr('action'),
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                toastr.success(response.message || 'Invitation sent successfully!');
+                form.reset();
+                setTimeout(function() {
+                    window.location.href = '<?php echo url("/admin/users"); ?>';
+                }, 1500);
+            } else {
+                toastr.error(response.message || 'Failed to send invitation');
+            }
+        },
+        error: function(xhr) {
+            const response = xhr.responseJSON;
+            if (response && response.errors) {
+                Object.values(response.errors).forEach(function(error) {
+                    toastr.error(error[0]);
+                });
+            } else if (response && response.message) {
+                toastr.error(response.message);
+            } else {
+                toastr.error('An error occurred. Please try again.');
+            }
+        }
+    });
+    
+    return false;
+}
+</script>
 @endsection
 
 @section('styles')

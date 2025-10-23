@@ -25,7 +25,7 @@
     <div class="col-lg-12 col-md-12 col-sm-12">
         <div class="card p-4">
             <div class="body">
-                <form method="POST" action="<?php echo url('/admin/users/create'); ?>" enctype="multipart/form-data">
+                <form method="POST" action="<?php echo url('/admin/users/create'); ?>" enctype="multipart/form-data" id="createUserForm" onsubmit="return handleCreateUser(event)">
                     <?php echo csrfField(); ?>
                     
                     <h2 class="card-inside-title">Name Surname</h2>
@@ -116,6 +116,46 @@
                 $('.reseller-logo').hide();
         });
     });
+    
+    // AJAX form submit handler
+    function handleCreateUser(event) {
+        event.preventDefault();
+        
+        const form = document.getElementById('createUserForm');
+        const formData = new FormData(form);
+        
+        $.ajax({
+            url: $(form).attr('action'),
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    toastr.success(response.message || 'User created successfully!');
+                    setTimeout(function() {
+                        window.location.href = '<?php echo url("/admin/users"); ?>';
+                    }, 1500);
+                } else {
+                    toastr.error(response.message || 'Failed to create user');
+                }
+            },
+            error: function(xhr) {
+                const response = xhr.responseJSON;
+                if (response && response.errors) {
+                    Object.values(response.errors).forEach(function(error) {
+                        toastr.error(error[0]);
+                    });
+                } else if (response && response.message) {
+                    toastr.error(response.message);
+                } else {
+                    toastr.error('An error occurred. Please try again.');
+                }
+            }
+        });
+        
+        return false;
+    }
 </script>
 @endsection
 

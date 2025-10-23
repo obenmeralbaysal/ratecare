@@ -12,6 +12,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
     <link href="https://fonts.googleapis.com/css?family=Muli:300,400,600,700" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/material-design-iconic-font/2.2.0/css/material-design-iconic-font.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <link href="{{ asset('css/admin.css') }}" rel="stylesheet">
     
     <style>
         body {
@@ -40,7 +42,8 @@
             color: #fff;
         }
         
-        .navbar {
+        /* Topbar (Logo + Logout) */
+        .topbar {
             background: #f8f9fa;
             border: none;
             border-bottom: 1px solid #dee2e6;
@@ -49,18 +52,18 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
-        .navbar .container {
+        .topbar .container {
             display: flex;
             align-items: center;
             justify-content: space-between;
             height: 60px;
         }
         
-        .navbar-brand img {
+        .topbar-brand img {
             height: 40px;
         }
         
-        .navbar .nav {
+        .topbar .nav {
             display: flex;
             align-items: center;
             height: 100%;
@@ -69,12 +72,12 @@
             list-style: none;
         }
         
-        .navbar .nav li {
+        .topbar .nav li {
             display: flex;
             align-items: center;
         }
         
-        .navbar .nav li a {
+        .topbar .nav li a {
             color: #333;
             text-decoration: none;
             padding: 15px;
@@ -82,22 +85,33 @@
             align-items: center;
         }
         
-        .navbar .nav li a:hover {
+        .topbar .nav li a:hover {
             background: rgba(0,0,0,0.05);
         }
         
-        .navbar .nav li a i {
+        .topbar .nav li a i {
             font-size: 18px;
             margin-right: 5px;
         }
         
-        .navbar .nav .float-right {
+        .topbar .nav .float-right {
             margin-left: auto;
         }
         
-        .menu-container {
+        /* Navbar (Main Menu) */
+        .navbar {
             background: #6c757d;
             border-bottom: 1px solid #5a6268;
+        }
+        
+        .navbar-toggler {
+            display: none;
+            background: transparent;
+            border: 1px solid #fff;
+            color: #fff;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 18px;
         }
         
         .h-menu {
@@ -160,6 +174,47 @@
             min-height: calc(100vh - 180px);
         }
         
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .navbar-toggler {
+                display: block;
+            }
+            
+            .h-menu {
+                flex-direction: column;
+                display: none;
+                width: 100%;
+            }
+            
+            .h-menu.show {
+                display: flex;
+            }
+            
+            .h-menu li {
+                width: 100%;
+            }
+            
+            .h-menu li a {
+                width: 100%;
+                border-bottom: 1px solid #5a6268;
+            }
+            
+            .h-menu li .sub-menu {
+                position: static;
+                display: none;
+                background: #5a6268;
+                box-shadow: none;
+            }
+            
+            .h-menu li:hover .sub-menu {
+                display: none;
+            }
+            
+            .h-menu li.open .sub-menu {
+                display: block;
+            }
+        }
+        
         .card {
             border: none;
             border-radius: 8px;
@@ -211,63 +266,63 @@
     </div>
 </div>
 
-<!-- Navbar -->
-<nav class="navbar">
+<!-- Topbar (Logo + Logout) -->
+<div class="topbar">
     <div class="container">
-        <ul class="nav navbar-nav">
+        <a class="topbar-brand" href="<?php echo url('/dashboard'); ?>">
+            <img src="<?php echo url('/assets/common/img/rate-care-logo.fw.png'); ?>" alt="RateCare">
+        </a>
+        
+        <ul class="nav float-right">
             <li>
-                <div class="navbar-header">
-                    <a class="navbar-brand" href="<?php echo url('/dashboard'); ?>">
-                        <img src="<?php echo url('/assets/common/img/rate-care-logo.fw.png'); ?>" alt="RateCare">
-                    </a>
-                </div>
-            </li>
-            
-            <li class="float-right">
-                <a href="<?php echo url('/logout'); ?>" class="mega-menu">
+                <a href="<?php echo url('/logout'); ?>">
                     <i class="zmdi zmdi-power"></i> Logout
                 </a>
             </li>
         </ul>
     </div>
-</nav>
-
-<!-- Menu -->
-<div class="menu-container">
-    <div class="container">
-        <div class="row">
-            <div class="col-md-12">
-                <ul class="h-menu">
-                    <li class="@yield('menu-dashboard')">
-                        <a href="<?php echo url('/dashboard'); ?>">
-                            <i class="zmdi zmdi-home"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="@yield('menu-users')">
-                        <a href="javascript:void(0)">Users</a>
-                        <ul class="sub-menu">
-                            <li><a href="<?php echo url('/admin/users'); ?>">All Users</a></li>
-                            <li><a href="<?php echo url('/admin/users/create'); ?>">New User</a></li>
-                            <li><a href="<?php echo url('/admin/users/invite'); ?>">Invite User</a></li>
-                        </ul>
-                    </li>
-                    <li class="@yield('menu-cache')">
-                        <a href="javascript:void(0)">Cache</a>
-                        <ul class="sub-menu">
-                            <li><a href="<?php echo url('/admin/cache/statistics'); ?>">Statistics</a></li>
-                        </ul>
-                    </li>
-                    <li class="@yield('menu-settings')">
-                        <a href="<?php echo url('/admin/settings'); ?>">Settings</a>
-                    </li>
-                    <li class="@yield('menu-logs')">
-                        <a href="<?php echo url('/admin/logs'); ?>">Logs</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </div>
 </div>
+
+<!-- Navbar (Main Menu) -->
+<nav class="navbar">
+    <div class="container">
+        <button class="navbar-toggler" onclick="toggleMobileMenu()">
+            <i class="zmdi zmdi-menu"></i>
+        </button>
+        
+        <ul class="h-menu" id="mainMenu">
+            <li class="@yield('menu-dashboard')">
+                <a href="<?php echo url('/dashboard'); ?>">
+                    <i class="zmdi zmdi-home"></i> Dashboard
+                </a>
+            </li>
+            <li class="@yield('menu-users')">
+                <a href="javascript:void(0)" onclick="toggleSubMenu(this)">
+                    Users <i class="zmdi zmdi-chevron-down"></i>
+                </a>
+                <ul class="sub-menu">
+                    <li><a href="<?php echo url('/admin/users'); ?>">All Users</a></li>
+                    <li><a href="<?php echo url('/admin/users/create'); ?>">New User</a></li>
+                    <li><a href="<?php echo url('/admin/users/invite'); ?>">Invite User</a></li>
+                </ul>
+            </li>
+            <li class="@yield('menu-cache')">
+                <a href="javascript:void(0)" onclick="toggleSubMenu(this)">
+                    Cache <i class="zmdi zmdi-chevron-down"></i>
+                </a>
+                <ul class="sub-menu">
+                    <li><a href="<?php echo url('/admin/cache/statistics'); ?>">Statistics</a></li>
+                </ul>
+            </li>
+            <li class="@yield('menu-settings')">
+                <a href="<?php echo url('/admin/settings'); ?>">Settings</a>
+            </li>
+            <li class="@yield('menu-logs')">
+                <a href="<?php echo url('/admin/logs'); ?>">Logs</a>
+            </li>
+        </ul>
+    </div>
+</nav>
 
 <!-- Page Content -->
 <section class="content home">
@@ -279,8 +334,17 @@
 <!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 
 <script>
+// Toastr configuration
+toastr.options = {
+    "closeButton": true,
+    "progressBar": true,
+    "positionClass": "toast-top-right",
+    "timeOut": "3000"
+};
+
 // Hide page loader
 $(document).ready(function() {
     setTimeout(function() {
@@ -295,12 +359,57 @@ $.ajaxSetup({
     }
 });
 
-// Mobile responsive: Show menu on mobile
+// Mobile menu toggle
+function toggleMobileMenu() {
+    $('#mainMenu').toggleClass('show');
+}
+
+// Mobile submenu toggle
+function toggleSubMenu(element) {
+    if ($(window).width() <= 768) {
+        $(element).parent().toggleClass('open');
+        return false;
+    }
+}
+
+// Close mobile menu on resize
 $(window).resize(function() {
     if ($(window).width() > 768) {
-        $('.h-menu').removeClass('show');
+        $('#mainMenu').removeClass('show');
+        $('.h-menu li').removeClass('open');
     }
 });
+
+// Global AJAX form handler
+function submitFormAjax(form, successCallback) {
+    const formData = new FormData(form);
+    const url = $(form).attr('action');
+    const method = $(form).attr('method') || 'POST';
+    
+    $.ajax({
+        url: url,
+        method: method,
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                toastr.success(response.message || 'Operation completed successfully!');
+                if (successCallback) successCallback(response);
+            } else {
+                toastr.error(response.message || 'Operation failed!');
+            }
+        },
+        error: function(xhr) {
+            const response = xhr.responseJSON;
+            if (response && response.message) {
+                toastr.error(response.message);
+            } else {
+                toastr.error('An error occurred. Please try again.');
+            }
+        }
+    });
+}
 </script>
 
 @yield('scripts')

@@ -40,7 +40,7 @@
                 <?php endif; ?>
 
                 <!-- Settings Form -->
-                <form method="POST" action="<?php echo url('/admin/settings/update'); ?>">
+                <form method="POST" action="<?php echo url('/admin/settings/update'); ?>" id="settingsForm" onsubmit="return handleSettingsUpdate(event)">
                     <?php echo csrfField(); ?>
                     
                     <?php if(isset($grouped_settings) && !empty($grouped_settings)): ?>
@@ -112,6 +112,46 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+function handleSettingsUpdate(event) {
+    event.preventDefault();
+    
+    const form = document.getElementById('settingsForm');
+    const formData = new FormData(form);
+    
+    $.ajax({
+        url: $(form).attr('action'),
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                toastr.success(response.message || 'Settings updated successfully!');
+            } else {
+                toastr.error(response.message || 'Failed to update settings');
+            }
+        },
+        error: function(xhr) {
+            const response = xhr.responseJSON;
+            if (response && response.errors) {
+                Object.values(response.errors).forEach(function(error) {
+                    toastr.error(error[0]);
+                });
+            } else if (response && response.message) {
+                toastr.error(response.message);
+            } else {
+                toastr.error('An error occurred. Please try again.');
+            }
+        }
+    });
+    
+    return false;
+}
+</script>
 @endsection
 
 @section('styles')
