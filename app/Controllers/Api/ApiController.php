@@ -171,7 +171,7 @@ class ApiController extends BaseController
                     // PARTIAL CACHE HIT - Some platforms need refresh
                     $cacheHitType = 'partial';
                     $cachedPlatforms = array_diff($this->getActivePlatformNames($cachedData), $missingPlatforms);
-                    $requestedPlatforms = $missingPlatforms;
+                    $requestedPlatforms = $missingPlatforms; // ALL platforms we'll try to request (success + fail)
                     
                     $this->logMessage("Cache: PARTIAL HIT - Missing/failed platforms: " . implode(', ', $missingPlatforms), 'INFO');
                     
@@ -222,6 +222,9 @@ class ApiController extends BaseController
                     ],
                 ];
                 
+                // Track ALL platforms we're requesting (before they succeed or fail)
+                $requestedPlatforms = $this->getAllActivePlatformNames($hotel);
+                
                 // Get prices from ALL platforms
                 $this->addDefaultIbePlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
                 $this->addBookingPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
@@ -230,8 +233,8 @@ class ApiController extends BaseController
                 $this->addOtelzPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
                 $this->addEtsturPlatform($response, $hotel, $currency, $checkIn, $checkOut, $adult);
                 
-                // Track requested platforms
-                $requestedPlatforms = $this->getActivePlatformNames($response);
+                // Note: requestedPlatforms = ALL attempted platforms (success + failed)
+                // Failed platforms won't be in response (they're missing)
                 
                 // De-duplicate before caching
                 $response = $this->deduplicatePlatforms($response);
@@ -2079,7 +2082,48 @@ class ApiController extends BaseController
     }
     
     /**
-     * Get active platform names from response
+     * Get ALL active platforms that will be requested based on hotel configuration
+     * This returns platforms that WILL BE requested, regardless of success/failure
+     */
+    private function getAllActivePlatformNames(array $hotel): array
+    {
+        $platforms = [];
+        
+        // Default IBE (sabeeapp, reseliva, hotelrunner)
+        if (!empty($hotel['default_ibe'])) {
+            $platforms[] = $hotel['default_ibe'];
+        }
+        
+        // Booking.com
+        if (!empty($hotel['booking_url']) && !empty($hotel['booking_is_active'])) {
+            $platforms[] = 'booking';
+        }
+        
+        // Hotels.com
+        if (!empty($hotel['hotels_url']) && !empty($hotel['hotels_is_active'])) {
+            $platforms[] = 'hotels';
+        }
+        
+        // TatilSepeti
+        if (!empty($hotel['tatilsepeti_url']) && !empty($hotel['tatilsepeti_is_active'])) {
+            $platforms[] = 'tatilsepeti';
+        }
+        
+        // OtelZ
+        if (!empty($hotel['otelz_url']) && !empty($hotel['otelz_is_active'])) {
+            $platforms[] = 'otelz';
+        }
+        
+        // ETSTur
+        if (!empty($hotel['etstur_hotel_id']) && !empty($hotel['is_etstur_active'])) {
+            $platforms[] = 'etstur';
+        }
+        
+        return $platforms;
+    }
+    
+    /**
+     * Get active platform names from response (SUCCESSFUL platforms only)
      */
     private function getActivePlatformNames(array $response): array
     {
