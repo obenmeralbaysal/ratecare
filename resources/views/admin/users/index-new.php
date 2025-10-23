@@ -192,10 +192,29 @@
                                 </li>
                             <?php endif; ?>
                         </ul>
-                        <div class="text-center">
+                        
+                        <!-- Go to Page Input -->
+                        <div class="pagination-goto mt-3 text-center">
+                            <form method="GET" action="<?php echo url('/admin/users'); ?>" class="d-inline-flex align-items-center">
+                                <?php if(isset($search) && $search): ?>
+                                    <input type="hidden" name="q" value="<?php echo htmlspecialchars($search); ?>">
+                                <?php endif; ?>
+                                <span class="mr-2">Go to page:</span>
+                                <input type="number" name="page" min="1" max="<?php echo $pagination['total_pages']; ?>" 
+                                       value="<?php echo $pagination['current_page']; ?>" 
+                                       class="form-control form-control-sm pagination-input mr-2" 
+                                       style="width: 80px;">
+                                <button type="submit" class="btn btn-sm btn-outline-primary">Go</button>
+                                <span class="ml-2 text-muted">of <?php echo $pagination['total_pages']; ?></span>
+                            </form>
+                        </div>
+                        
+                        <!-- Pagination Info -->
+                        <div class="pagination-info text-center mt-3">
                             <small class="text-muted">
-                                Page <?php echo $pagination['current_page']; ?> of <?php echo $pagination['total_pages']; ?>
-                                (<?php echo $pagination['total']; ?> total users)
+                                Showing <?php echo (($pagination['current_page'] - 1) * $pagination['per_page']) + 1; ?> 
+                                to <?php echo min($pagination['current_page'] * $pagination['per_page'], $pagination['total']); ?> 
+                                of <?php echo $pagination['total']; ?> results
                             </small>
                         </div>
                     </nav>
@@ -223,6 +242,44 @@
     .hotel-name {
         color: #333;
         font-weight: 500;
+    }
+    
+    /* Pagination styles */
+    .pagination-goto {
+        margin: 15px 0;
+    }
+    
+    .pagination-input {
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        text-align: center;
+        font-size: 14px;
+    }
+    
+    .pagination-input:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+        outline: none;
+    }
+    
+    .d-inline-flex {
+        display: inline-flex;
+    }
+    
+    .align-items-center {
+        align-items: center;
+    }
+    
+    .btn-outline-primary {
+        color: #007bff;
+        border-color: #007bff;
+        background-color: transparent;
+    }
+    
+    .btn-outline-primary:hover {
+        color: #fff;
+        background-color: #007bff;
+        border-color: #007bff;
     }
 </style>
 @endsection

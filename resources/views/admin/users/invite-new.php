@@ -5,50 +5,97 @@
 @section('menu-users', 'active')
 
 @section('content')
-<div class="row">
-    <div class="col-md-8 offset-md-2">
-        <div class="card">
-            <div class="card-header">
-                <h4>Invite User</h4>
-            </div>
-            <div class="card-body">
+<div class="block-header">
+    <div class="row clearfix">
+        <div class="col-lg-5 col-md-5 col-sm-12">
+            <h2 class="float-left">Invite User</h2>
+        </div>
+        <div class="col-lg-7 col-md-7 col-sm-12">
+            <ul class="breadcrumb float-md-right padding-0">
+                <li><a href="<?php echo url('/dashboard'); ?>"><i class="zmdi zmdi-home"></i></a></li>
+                <li><a href="<?php echo url('/admin/users'); ?>">Users</a></li>
+                <li class="active">Invite User</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<?php if(flash('error')): ?>
+    <div class="alert alert-danger"><?php echo flash('error'); ?></div>
+<?php endif; ?>
+
+<?php if(flash('success')): ?>
+    <div class="alert alert-success"><?php echo flash('success'); ?></div>
+<?php endif; ?>
+
+<div class="row clearfix">
+    <div class="col-lg-12 col-md-12 col-sm-12">
+        <div class="card p-4">
+            <div class="body">
                 <form method="POST" action="<?php echo url('/admin/users/invite'); ?>">
                     <?php echo csrfField(); ?>
                     
-                    <div class="form-group">
-                        <label>Email Address</label>
-                        <input type="email" name="email" class="form-control" placeholder="user@example.com" required>
-                        <small class="form-text text-muted">
-                            An invitation email will be sent to this address
-                        </small>
+                    <h2 class="card-inside-title">Name Surname</h2>
+                    <div class="row clearfix">
+                        <div class="col-sm-12">
+                            <div class="form-group">
+                                <input type="text" class="form-control" name="namesurname" placeholder="John Doe" required />
+                            </div>
+                        </div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>User Type</label>
-                        <select name="user_type" class="form-control" required>
-                            <option value="">Select Type</option>
-                            <option value="admin">Admin</option>
-                            <option value="reseller">Reseller</option>
-                            <option value="customer">Customer</option>
-                        </select>
+
+                    <h2 class="card-inside-title">E-Mail</h2>
+                    <div class="row clearfix">
+                        <div class="col-sm-12">
+                            <div class="form-group">
+                                <input type="email" class="form-control" name="email" placeholder="johndoe@example.com" required />
+                            </div>
+                        </div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>Message (Optional)</label>
-                        <textarea name="message" class="form-control" rows="3" placeholder="Add a personal message..."></textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="zmdi zmdi-email"></i> Send Invitation
-                        </button>
-                        <a href="<?php echo url('/admin/users'); ?>" class="btn btn-secondary">
-                            <i class="zmdi zmdi-arrow-left"></i> Cancel
-                        </a>
-                    </div>
+
+                    <button type="submit" class="btn btn-primary pull-right">
+                        <i class="zmdi zmdi-mail-send"></i> Send Invitation
+                    </button>
+                    <div class="clearfix"></div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+@endsection
+
+@section('styles')
+<style>
+    .breadcrumb {
+        background: transparent;
+        padding: 0;
+        margin: 0;
+        list-style: none;
+    }
+    .breadcrumb li {
+        display: inline;
+        font-size: 14px;
+    }
+    .breadcrumb li + li:before {
+        content: "/";
+        padding: 0 5px;
+        color: #ccc;
+    }
+    .breadcrumb li a {
+        color: #007bff;
+        text-decoration: none;
+    }
+    .breadcrumb li.active {
+        color: #6c757d;
+    }
+    .card-inside-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        color: #333;
+    }
+    .padding-0 {
+        padding: 0;
+    }
+</style>
 @endsection
