@@ -1302,6 +1302,7 @@ class ApiController extends BaseController
         
         if (empty($url)) {
             $this->logMessage("TatilSepeti: Empty URL provided", 'ERROR');
+            $this->logChannelError('tatilsepeti', 'Empty URL provided');
             return "NA";
         }
         
@@ -1339,6 +1340,7 @@ class ApiController extends BaseController
             
             if (!$result || $httpCode !== 200) {
                 $this->logMessage("TatilSepeti: HTTP error {$httpCode} or empty response", 'ERROR');
+                $this->logChannelError('tatilsepeti', "HTTP {$httpCode} for URL: {$url}");
                 return "NA";
             }
             
@@ -1384,6 +1386,7 @@ class ApiController extends BaseController
             
         } catch (\Exception $e) {
             $this->logMessage("TatilSepeti: Error - " . $e->getMessage(), 'ERROR');
+            $this->logChannelError('tatilsepeti', "Exception: " . $e->getMessage());
             return "NA";
         }
     }
@@ -1533,6 +1536,7 @@ class ApiController extends BaseController
             
         } catch (\Exception $e) {
             $this->logMessage("Sabee API: Error - " . $e->getMessage(), 'ERROR');
+            $this->logChannelError('sabeeapp', "Exception: " . $e->getMessage());
             return "NA";
         }
     }
@@ -1547,6 +1551,7 @@ class ApiController extends BaseController
             
             if (!$response || !isset($response->success) || !$response->success) {
                 $this->logMessage("Sabee API: Failed to get hotel inventory", 'ERROR');
+                $this->logChannelError('sabeeapp', "Failed to get hotel inventory for hotel ID: {$sabeeHotelId}");
                 return [];
             }
             
@@ -1562,6 +1567,7 @@ class ApiController extends BaseController
             
         } catch (\Exception $e) {
             $this->logMessage("Sabee API: Error getting rooms - " . $e->getMessage(), 'ERROR');
+            $this->logChannelError('sabeeapp', "Error getting rooms: " . $e->getMessage());
             return [];
         }
     }
@@ -1609,6 +1615,7 @@ class ApiController extends BaseController
             
             if ($httpCode !== 200) {
                 $this->logMessage("Sabee API: HTTP error {$httpCode} for endpoint {$endpoint}", 'ERROR');
+                $this->logChannelError('sabeeapp', "HTTP {$httpCode} error for endpoint: {$endpoint}");
                 return null;
             }
             
@@ -1630,6 +1637,7 @@ class ApiController extends BaseController
         // Check if otelzUrl is numeric
         if (!is_numeric($otelzUrl)) {
             $this->logMessage("OtelZ API: Invalid facility ID - " . $otelzUrl, 'ERROR');
+            $this->logChannelError('otelz', "Invalid facility ID: {$otelzUrl}");
             return "NA";
         }
 
@@ -1640,6 +1648,7 @@ class ApiController extends BaseController
         // Check credentials
         if (!$username || !$passwd) {
             $this->logMessage("OtelZ API: Missing credentials", 'ERROR');
+            $this->logChannelError('otelz', 'Missing credentials in environment');
             return "NA";
         }
         
@@ -1686,6 +1695,7 @@ class ApiController extends BaseController
         // Check for cURL errors
         if ($curlError) {
             $this->logMessage("OtelZ API cURL error: " . $curlError, 'ERROR');
+            $this->logChannelError('otelz', "cURL error: {$curlError}");
             return "NA";
         }
 
@@ -1696,6 +1706,9 @@ class ApiController extends BaseController
             // Special handling for 401 Unauthorized
             if ($httpCode === 401) {
                 $this->logMessage("OtelZ API: Authentication failed - check credentials and partner_id", 'ERROR');
+                $this->logChannelError('otelz', "HTTP 401 - Authentication failed for facility: {$facilityID}");
+            } else {
+                $this->logChannelError('otelz', "HTTP {$httpCode} for facility: {$facilityID}");
             }
             
             return "NA";
@@ -1777,6 +1790,7 @@ class ApiController extends BaseController
         }
 
         $this->logMessage("OtelZ API: Unexpected response structure for facility {$facilityID} - " . substr($response, 0, 300), 'ERROR');
+        $this->logChannelError('otelz', "Unexpected response structure for facility: {$facilityID}");
         return "NA";
     }
     
