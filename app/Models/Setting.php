@@ -157,7 +157,7 @@ class Setting extends BaseModel
      */
     public function getForAdmin()
     {
-        $sql = "SELECT * FROM {$this->table} ORDER BY `group`, `key`";
+        $sql = "SELECT * FROM {$this->table} ORDER BY `key`";
         return $this->raw($sql);
     }
     
