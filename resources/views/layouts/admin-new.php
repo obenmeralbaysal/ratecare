@@ -41,12 +41,12 @@
         }
         
         .navbar {
-            background: #2c2c2c;
+            background: #f8f9fa;
             border: none;
-            border-bottom: 1px solid #1a1a1a;
+            border-bottom: 1px solid #dee2e6;
             padding: 0;
             min-height: 60px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
         .navbar .container {
@@ -75,7 +75,7 @@
         }
         
         .navbar .nav li a {
-            color: #ffffff;
+            color: #333;
             text-decoration: none;
             padding: 15px;
             display: flex;
@@ -83,7 +83,7 @@
         }
         
         .navbar .nav li a:hover {
-            background: rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.05);
         }
         
         .navbar .nav li a i {
@@ -91,9 +91,13 @@
             margin-right: 5px;
         }
         
+        .navbar .nav .float-right {
+            margin-left: auto;
+        }
+        
         .menu-container {
-            background: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
+            background: #6c757d;
+            border-bottom: 1px solid #5a6268;
         }
         
         .h-menu {
@@ -108,7 +112,7 @@
         }
         
         .h-menu li a {
-            color: #333;
+            color: #ffffff;
             text-decoration: none;
             padding: 15px 20px;
             display: block;
@@ -125,15 +129,15 @@
             position: absolute;
             top: 100%;
             left: 0;
-            background: #fff;
-            border: 1px solid #dee2e6;
+            background: #5a6268;
+            border: 1px solid #495057;
             min-width: 200px;
             list-style: none;
             margin: 0;
             padding: 0;
             display: none;
             z-index: 1000;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
         }
         
         .h-menu li:hover .sub-menu {
@@ -142,8 +146,8 @@
         
         .h-menu li .sub-menu li a {
             padding: 10px 20px;
-            border-bottom: 1px solid #f0f0f0;
-            color: #333;
+            border-bottom: 1px solid #495057;
+            color: #ffffff;
         }
         
         .h-menu li .sub-menu li a:hover {
