@@ -770,6 +770,37 @@ class ApiController extends BaseController
     }
     
     /**
+     * Channel-specific daily error log
+     * Creates separate log files per platform per day
+     * Example: sabeeapp_2025-10-23.log, booking_2025-10-23.log
+     */
+    private function logChannelError($channel, $message, $level = 'ERROR')
+    {
+        // Use APP_ROOT if defined, otherwise fallback to __DIR__
+        $appRoot = defined('APP_ROOT') ? APP_ROOT : dirname(dirname(dirname(__DIR__)));
+        $logDir = $appRoot . '/storage/logs/channels';
+        
+        // Create channel logs directory
+        if (!is_dir($logDir)) {
+            mkdir($logDir, 0777, true);
+        }
+        
+        // Daily log file per channel: channelname_YYYY-MM-DD.log
+        $date = date('Y-m-d');
+        $logFile = $logDir . '/' . strtolower($channel) . '_' . $date . '.log';
+        
+        $timestamp = date('Y-m-d H:i:s');
+        $logEntry = "[{$timestamp}] [{$level}] {$message}" . PHP_EOL;
+        
+        try {
+            file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+        } catch (\Exception $e) {
+            // Fallback to regular log if channel log fails
+            $this->logMessage("Channel log failed for {$channel}: " . $e->getMessage(), 'WARNING');
+        }
+    }
+    
+    /**
      * Validate API credentials
      */
     private function validateApiCredentials()
@@ -1086,6 +1117,7 @@ class ApiController extends BaseController
         
         if (!$html) {
             $this->logMessage("Booking.com: Failed to fetch HTML with proxy method", 'ERROR');
+            $this->logChannelError('booking', "Failed to fetch HTML for URL: {$search_url}");
             return "NA";
         }
         
@@ -1139,6 +1171,7 @@ class ApiController extends BaseController
         }
         
         $this->logMessage("Booking.com: No price found with proxy method", 'WARNING');
+        $this->logChannelError('booking', "No price found for URL: {$search_url}");
         return "NA";
     }
     
@@ -1152,6 +1185,7 @@ class ApiController extends BaseController
         
         if (empty($url)) {
             $this->logMessage("Hotels.com: Empty URL provided", 'ERROR');
+            $this->logChannelError('hotels', 'Empty URL provided');
             return "NA";
         }
         
@@ -1180,6 +1214,7 @@ class ApiController extends BaseController
         
         if (!$html) {
             $this->logMessage("Hotels.com: Failed to fetch HTML with proxy method", 'ERROR');
+            $this->logChannelError('hotels', "Failed to fetch HTML for URL: {$search_url}");
             return "NA";
         }
         
@@ -1254,6 +1289,7 @@ class ApiController extends BaseController
         }
         
         $this->logMessage("Hotels.com: No price found with any pattern", 'WARNING');
+        $this->logChannelError('hotels', "No price found with any pattern for URL: {$search_url}");
         return "NA";
     }
     
