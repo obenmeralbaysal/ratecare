@@ -114,13 +114,12 @@ class ApiController extends BaseController
             
             // Try to get from cache
             $cachedData = $this->cache->get($cacheKey);
-            $cacheHitType = 'miss';
-            $cachedPlatforms = [];
-            $requestedPlatforms = [];
-            $updatedPlatforms = [];
             
-            if ($cachedData) {
-                $this->logMessage("Cache: HIT - Data found in cache", 'INFO');
+            if ($cachedData !== null) {
+                $this->logMessage("Cache: Found cached data", 'INFO');
+                
+                // Clean failed platforms from cache
+                $cachedData = $this->removeFailedPlatforms($cachedData);
                 
                 // Check for missing/failed platforms (Partial Cache Strategy)
                 $missingPlatforms = $this->getMissingPlatforms($cachedData, $hotel);
@@ -135,7 +134,8 @@ class ApiController extends BaseController
                     $responseTime = round((microtime(true) - $startTime) * 1000);
                     
                     // Detect errors even in cached data
-                    $errorDetection = $this->detectPlatformErrors($cachedData);
+                    // Check if all expected platforms are present
+                    $errorDetection = $this->detectPlatformErrors($cachedData, $cachedPlatforms);
                     $hasError = $errorDetection['has_error'];
                     $errorPlatforms = $errorDetection['error_platforms'];
                     $errorMessage = $errorDetection['error_message'];
@@ -233,7 +233,9 @@ class ApiController extends BaseController
             $responseTime = round((microtime(true) - $startTime) * 1000);
             
             // Detect errors in platform responses
-            $errorDetection = $this->detectPlatformErrors($response);
+            // Check which platforms were requested but are missing from response
+            $expectedPlatforms = array_merge($cachedPlatforms ?? [], $requestedPlatforms ?? []);
+            $errorDetection = $this->detectPlatformErrors($response, $expectedPlatforms);
             $hasError = $errorDetection['has_error'];
             $errorPlatforms = $errorDetection['error_platforms'];
             $errorMessage = $errorDetection['error_message'];
@@ -537,21 +539,24 @@ class ApiController extends BaseController
             $this->logMessage("Platform {$name}: No conversion needed - Price already in {$targetCurrency}", 'DEBUG');
         }
         
-        $data = [
-            "status" => $status,
-            "name" => $name,
-            "displayName" => $displayName,
-            "price" => $price,
-            "url" => $url,
-        ];
-        
-        $response["data"]["platforms"][] = $data;
-        
-        // Circuit breaker: record success or failure
+        // Only add successful platforms to response
+        // Failed platforms should be MISSING from response (missing = error)
         if ($status === "success") {
+            $data = [
+                "status" => $status,
+                "name" => $name,
+                "displayName" => $displayName,
+                "price" => $price,
+                "url" => $url,
+            ];
+            
+            $response["data"]["platforms"][] = $data;
             $this->circuitBreaker->recordSuccess($name);
+            $this->logMessage("Platform {$name}: Added to response with price {$price}", 'DEBUG');
         } else {
+            // Don't add failed platform to response
             $this->circuitBreaker->recordFailure($name);
+            $this->logMessage("Platform {$name}: FAILED - NOT added to response (price was NA/null)", 'WARNING');
         }
     }
     
@@ -2089,14 +2094,7 @@ class ApiController extends BaseController
         // Circuit breaker check
         if (!$this->circuitBreaker->isAvailable($platform)) {
             $this->logMessage("Circuit Breaker: Platform {$platform} is OPEN (unavailable), skipping request", 'WARNING');
-            $response['data']['platforms'][] = [
-                'name' => $platform,
-                'displayName' => ucfirst($platform),
-                'status' => 'circuit_open',
-                'price' => 'NA',
-                'url' => 'NA',
-                'message' => 'Service temporarily unavailable (circuit breaker)'
-            ];
+            // DON'T add to response - missing platform = error
             return;
         }
         
@@ -2133,15 +2131,70 @@ class ApiController extends BaseController
     }
     
     /**
-     * Detect errors in platform responses
+     * Remove failed platforms from cached data
+     * Failed platforms should not persist in cache
      * 
+     * @param array $cachedData Cached response data
+     * @return array Cleaned response data
+     */
+    private function removeFailedPlatforms(array $cachedData): array
+    {
+        if (!isset($cachedData['data']['platforms']) || !is_array($cachedData['data']['platforms'])) {
+            return $cachedData;
+        }
+        
+        $cleanedPlatforms = [];
+        $removedCount = 0;
+        
+        foreach ($cachedData['data']['platforms'] as $platform) {
+            $shouldRemove = false;
+            $platformName = $platform['name'] ?? 'unknown';
+            
+            // Remove if status is failed/error
+            if (isset($platform['status']) && 
+                in_array(strtolower($platform['status']), ['failed', 'error', 'timeout', 'circuit_open', 'unavailable'])) {
+                $shouldRemove = true;
+            }
+            
+            // Remove if price is NA/null/empty
+            if (isset($platform['price'])) {
+                $price = strtoupper((string)$platform['price']);
+                if (in_array($price, ['NA', 'N/A', 'NULL', '']) || empty($platform['price'])) {
+                    $shouldRemove = true;
+                }
+            }
+            
+            if ($shouldRemove) {
+                $this->logMessage("Cache: Removing failed platform from cache - {$platformName}", 'INFO');
+                $removedCount++;
+            } else {
+                $cleanedPlatforms[] = $platform;
+            }
+        }
+        
+        $cachedData['data']['platforms'] = $cleanedPlatforms;
+        
+        if ($removedCount > 0) {
+            $this->logMessage("Cache: Cleaned {$removedCount} failed platform(s) from cache", 'INFO');
+        }
+        
+        return $cachedData;
+    }
+    
+    /**
+     * Detect errors in platform responses
+     * Missing platforms = errors (they failed and weren't added to response)
+     * 
+     * @param array $response Response data
+     * @param array|null $expectedPlatforms Expected platform names (if known)
      * @return array ['has_error' => bool, 'error_platforms' => array, 'error_message' => string|null, 'main_channel' => string|null]
      */
-    private function detectPlatformErrors(array $response): array
+    private function detectPlatformErrors(array $response, ?array $expectedPlatforms = null): array
     {
         $errorPlatforms = [];
         $errorMessages = [];
         $allPlatforms = [];
+        $actualPlatforms = [];
         
         if (isset($response['data']['platforms']) && is_array($response['data']['platforms'])) {
             foreach ($response['data']['platforms'] as $platform) {
@@ -2190,6 +2243,20 @@ class ApiController extends BaseController
                     $errorPlatforms[] = $platformName;
                     $errorMessages[] = "{$platformName}: {$errorReason}" . 
                         (isset($platform['message']) ? " - " . $platform['message'] : '');
+                } else {
+                    // Platform is in response and successful
+                    $actualPlatforms[] = $platformName;
+                }
+            }
+        }
+        
+        // Check for MISSING platforms (expected but not in response = failed)
+        if ($expectedPlatforms !== null && is_array($expectedPlatforms)) {
+            foreach ($expectedPlatforms as $expectedPlatform) {
+                // Platform was expected but not in actual response
+                if (!in_array($expectedPlatform, $actualPlatforms) && !in_array($expectedPlatform, $errorPlatforms)) {
+                    $errorPlatforms[] = $expectedPlatform;
+                    $errorMessages[] = "{$expectedPlatform}: missing - Platform failed and was not added to response";
                 }
             }
         }
