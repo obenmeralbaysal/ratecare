@@ -771,16 +771,17 @@ class ApiController extends BaseController
     
     /**
      * Channel-specific daily error log
-     * Creates separate log files per platform per day
+     * Creates separate log files per platform per day in /storage/logs/
      * Example: sabeeapp_2025-10-23.log, booking_2025-10-23.log
+     * Visible in log viewer
      */
     private function logChannelError($channel, $message, $level = 'ERROR')
     {
         // Use APP_ROOT if defined, otherwise fallback to __DIR__
         $appRoot = defined('APP_ROOT') ? APP_ROOT : dirname(dirname(dirname(__DIR__)));
-        $logDir = $appRoot . '/storage/logs/channels';
+        $logDir = $appRoot . '/storage/logs';
         
-        // Create channel logs directory
+        // Create logs directory if not exists
         if (!is_dir($logDir)) {
             mkdir($logDir, 0777, true);
         }
