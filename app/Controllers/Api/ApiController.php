@@ -131,9 +131,29 @@ class ApiController extends BaseController
                     $cachedPlatforms = $this->getActivePlatformNames($cachedData);
                     $this->logMessage("Cache: FULL HIT - All platforms valid, returning cached data", 'INFO');
                     
-                    // Log statistics
+                    // Log statistics with error detection
                     $responseTime = round((microtime(true) - $startTime) * 1000);
-                    $this->statistics->logRequest($widgetCode, $params, $cacheHitType, $cachedPlatforms, null, null, $responseTime);
+                    
+                    // Detect errors even in cached data
+                    $errorDetection = $this->detectPlatformErrors($cachedData);
+                    $hasError = $errorDetection['has_error'];
+                    $errorPlatforms = $errorDetection['error_platforms'];
+                    $errorMessage = $errorDetection['error_message'];
+                    $mainChannel = $errorDetection['main_channel'];
+                    
+                    $this->statistics->logRequest(
+                        $widgetCode, 
+                        $params, 
+                        $cacheHitType, 
+                        $cachedPlatforms, 
+                        null, 
+                        null, 
+                        $responseTime,
+                        $mainChannel,
+                        $hasError,
+                        !empty($errorPlatforms) ? $errorPlatforms : null,
+                        $errorMessage
+                    );
                     
                     // Add cache info to response
                     $cachedData['data']['cache_info'] = [
@@ -212,7 +232,14 @@ class ApiController extends BaseController
             // Calculate response time
             $responseTime = round((microtime(true) - $startTime) * 1000);
             
-            // Log statistics
+            // Detect errors in platform responses
+            $errorDetection = $this->detectPlatformErrors($response);
+            $hasError = $errorDetection['has_error'];
+            $errorPlatforms = $errorDetection['error_platforms'];
+            $errorMessage = $errorDetection['error_message'];
+            $mainChannel = $errorDetection['main_channel'];
+            
+            // Log statistics with error tracking
             $this->statistics->logRequest(
                 $widgetCode,
                 $params,
@@ -220,7 +247,11 @@ class ApiController extends BaseController
                 !empty($cachedPlatforms) ? $cachedPlatforms : null,
                 !empty($requestedPlatforms) ? $requestedPlatforms : null,
                 !empty($updatedPlatforms) ? $updatedPlatforms : null,
-                $responseTime
+                $responseTime,
+                $mainChannel,
+                $hasError,
+                !empty($errorPlatforms) ? $errorPlatforms : null,
+                $errorMessage
             );
             
             // Add cache info to response
@@ -2099,6 +2130,79 @@ class ApiController extends BaseController
             default:
                 $this->logMessage("Cache: Unknown platform - {$platform}", 'WARNING');
         }
+    }
+    
+    /**
+     * Detect errors in platform responses
+     * 
+     * @return array ['has_error' => bool, 'error_platforms' => array, 'error_message' => string|null, 'main_channel' => string|null]
+     */
+    private function detectPlatformErrors(array $response): array
+    {
+        $errorPlatforms = [];
+        $errorMessages = [];
+        $allPlatforms = [];
+        
+        if (isset($response['data']['platforms']) && is_array($response['data']['platforms'])) {
+            foreach ($response['data']['platforms'] as $platform) {
+                $platformName = $platform['name'] ?? 'unknown';
+                $allPlatforms[] = $platformName;
+                
+                // Check for various error conditions
+                $isError = false;
+                $errorReason = '';
+                
+                // Status-based errors
+                if (isset($platform['status'])) {
+                    $status = strtolower($platform['status']);
+                    if (in_array($status, ['failed', 'error', 'timeout', 'circuit_open', 'unavailable'])) {
+                        $isError = true;
+                        $errorReason = $status;
+                    }
+                }
+                
+                // Price-based errors (NA, N/A, null, empty)
+                if (isset($platform['price'])) {
+                    $price = strtoupper((string)$platform['price']);
+                    if (in_array($price, ['NA', 'N/A', 'NULL', '']) || empty($platform['price'])) {
+                        // Only count as error if not explicitly successful
+                        if (!isset($platform['status']) || $platform['status'] !== 'success') {
+                            $isError = true;
+                            $errorReason = $errorReason ?: 'no_price';
+                        }
+                    }
+                }
+                
+                // Message-based errors
+                if (isset($platform['message']) && !empty($platform['message'])) {
+                    $message = strtolower($platform['message']);
+                    if (strpos($message, 'error') !== false || 
+                        strpos($message, 'fail') !== false || 
+                        strpos($message, 'unavailable') !== false ||
+                        strpos($message, 'timeout') !== false) {
+                        $isError = true;
+                        $errorReason = $errorReason ?: 'error_message';
+                    }
+                }
+                
+                // Record error
+                if ($isError) {
+                    $errorPlatforms[] = $platformName;
+                    $errorMessages[] = "{$platformName}: {$errorReason}" . 
+                        (isset($platform['message']) ? " - " . $platform['message'] : '');
+                }
+            }
+        }
+        
+        // Determine main channel (first platform or most used)
+        $mainChannel = !empty($allPlatforms) ? $allPlatforms[0] : null;
+        
+        return [
+            'has_error' => !empty($errorPlatforms),
+            'error_platforms' => $errorPlatforms,
+            'error_message' => !empty($errorMessages) ? implode('; ', $errorMessages) : null,
+            'main_channel' => $mainChannel
+        ];
     }
     
     /**
