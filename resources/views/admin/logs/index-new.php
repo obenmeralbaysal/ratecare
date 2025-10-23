@@ -114,15 +114,124 @@
         </div>
     </div>
 @endsection
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    function changeLogFile() {
+        const select = document.getElementById('logFileSelect');
+        const selectedFile = select.value;
+        
+        if (selectedFile) {
+            window.location.href = '<?php echo url('/admin/logs'); ?>?file=' + encodeURIComponent(selectedFile);
+        }
+    }
+ @section('scripts')
+   
+    function refreshLog() {
+        window.location.reload();
+    }
+    
+    // Auto-scroll to bottom of log content
+    document.addEventListener('DOMContentLoaded', function() {
+        const logContent = document.getElementById('logContent');
+        if (logContent) {
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+    });
+    
+    // Auto-refresh every 30 seconds if enabled
+    let autoRefresh = false;
+    
+    function toggleAutoRefresh() {
+        autoRefresh = !autoRefresh;
+        if (autoRefresh) {
+            setInterval(function() {
+                if (autoRefresh) {
+                    refreshLog();
+                }
+            }, 30000);
+        }
+    }
+</script>
+@endsection
 
 @section('styles')
 <style>
-    .table tbody tr td:nth-child(2) {
-        font-weight: bold;
-    }
-    .badge-error { background: #dc3545; }
-    .badge-warning { background: #ffc107; }
-    .badge-info { background: #17a2b8; }
-    .badge-debug { background: #6c757d; }
+.log-viewer {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            padding: 20px;
+            border-radius: 4px;
+            max-height: 600px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .log-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .log-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .log-controls .form-group {
+            margin-bottom: 0;
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .log-stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .log-stat {
+            background: #fff;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #28a745;
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        .log-stat h6 {
+            margin: 0 0 5px 0;
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        
+        .log-stat .value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .empty-logs {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        
+        .empty-logs i {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #ccc;
+        }
 </style>
 @endsection
