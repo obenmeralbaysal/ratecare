@@ -28,7 +28,7 @@
 
 <div class="row clearfix">
     <div class="col-lg-12 col-md-12 col-sm-12">
-        <div class="card">
+        <div class="card p-4">
             <div class="body">
                 <form method="POST" action="<?php echo url('/admin/hotels/update/' . ($hotel['id'] ?? '')); ?>">
                     <?php echo csrfField(); ?>
