@@ -128,6 +128,8 @@ class ApiController extends BaseController
                     // FULL CACHE HIT - All platforms are good!
                     $cacheHitType = 'full';
                     $cachedPlatforms = $this->getActivePlatformNames($cachedData);
+                    $requestedPlatforms = null; // No new requests needed
+                    $updatedPlatforms = null; // Nothing updated
                     $this->logMessage("Cache: FULL HIT - All platforms valid, returning cached data", 'INFO');
                     
                     // Log statistics with error detection
@@ -158,7 +160,9 @@ class ApiController extends BaseController
                     // Add cache info to response
                     $cachedData['data']['cache_info'] = [
                         'hit_type' => 'full',
-                        'cached_platforms' => $cachedPlatforms,
+                        'cached_platforms' => $cachedPlatforms ?? [],
+                        'requested_platforms' => [],
+                        'updated_platforms' => [],
                         'response_time_ms' => $responseTime
                     ];
                     
@@ -196,6 +200,8 @@ class ApiController extends BaseController
             } else {
                 // CACHE MISS - Get all platforms
                 $cacheHitType = 'miss';
+                $cachedPlatforms = null; // No cached platforms
+                $updatedPlatforms = null; // Creating new cache, not updating
                 $this->logMessage("Cache: MISS - No cache found, fetching all platforms", 'INFO');
                 
                 // Initialize response
@@ -265,9 +271,9 @@ class ApiController extends BaseController
             // Add cache info to response
             $response['data']['cache_info'] = [
                 'hit_type' => $cacheHitType,
-                'cached_platforms' => $cachedPlatforms,
-                'requested_platforms' => $requestedPlatforms,
-                'updated_platforms' => $updatedPlatforms,
+                'cached_platforms' => $cachedPlatforms ?? [],
+                'requested_platforms' => $requestedPlatforms ?? [],
+                'updated_platforms' => $updatedPlatforms ?? [],
                 'response_time_ms' => $responseTime
             ];
             
