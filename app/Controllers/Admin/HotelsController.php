@@ -108,11 +108,17 @@ class HotelsController extends BaseController
             // Update hotel
             $this->updateHotel($hotelId, $data);
             
-            return $this->redirect('/admin/users')->with('success', 'Hotel information updated successfully');
+            return $this->json([
+                'success' => true,
+                'message' => 'Hotel information updated successfully'
+            ]);
             
         } catch (\Exception $e) {
             error_log("Hotel update error: " . $e->getMessage());
-            return $this->back()->with('error', $e->getMessage());
+            return $this->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 400);
         }
     }
     

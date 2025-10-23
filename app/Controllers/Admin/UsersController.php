@@ -190,11 +190,17 @@ class UsersController extends BaseController
                 'userType' => 'required|in:0,1,2'
             ]);
             
-            // For demo purposes, just redirect with success
-            return $this->redirect('/admin/users')->with('success', 'User created successfully');
+            // For demo purposes, return JSON success
+            return $this->json([
+                'success' => true,
+                'message' => 'User created successfully'
+            ]);
             
         } catch (\Exception $e) {
-            return $this->back()->with('error', $e->getMessage());
+            return $this->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 400);
         }
     }
     
@@ -210,11 +216,17 @@ class UsersController extends BaseController
                 'email' => 'required|email'
             ]);
             
-            // For demo purposes, just redirect with success
-            return $this->redirect('/admin/users')->with('success', 'Invitation sent successfully to ' . $this->input('email'));
+            // For demo purposes, return JSON success
+            return $this->json([
+                'success' => true,
+                'message' => 'Invitation sent successfully to ' . $this->input('email')
+            ]);
             
         } catch (\Exception $e) {
-            return $this->back()->with('error', $e->getMessage());
+            return $this->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 400);
         }
     }
     

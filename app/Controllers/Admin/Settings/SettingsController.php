@@ -67,7 +67,10 @@ class SettingsController extends BaseController
             $settings = $this->input('settings', []);
             
             if (empty($settings)) {
-                return $this->back()->with('error', 'No settings to update');
+                return $this->json([
+                    'success' => false,
+                    'message' => 'No settings to update'
+                ], 400);
             }
             
             // Validate critical settings
@@ -76,10 +79,16 @@ class SettingsController extends BaseController
             // Update settings
             $this->settingModel->bulkUpdate($settings);
             
-            return $this->back()->with('success', 'Settings updated successfully');
+            return $this->json([
+                'success' => true,
+                'message' => 'Settings updated successfully'
+            ]);
             
         } catch (\Exception $e) {
-            return $this->back()->with('error', $e->getMessage());
+            return $this->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 400);
         }
     }
     
