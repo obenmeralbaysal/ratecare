@@ -821,7 +821,7 @@ class ApiController extends BaseController
     }
     
     /**
-     * Get HTML content via cURL
+     * Get HTML content via cURL with detailed logging
      */
     private function getHTML($url, $timeout = 30, $type = 0)
     {
@@ -839,8 +839,9 @@ class ApiController extends BaseController
         curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_MAXREDIRS, 10); // Max 10 redirects
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
-        curl_setopt($ch, CURLOPT_FAILONERROR, 1);
+        curl_setopt($ch, CURLOPT_FAILONERROR, 0); // Don't fail on HTTP errors, handle manually
         curl_setopt($ch, CURLOPT_COOKIESESSION, true);
         curl_setopt($ch, CURLOPT_FRESH_CONNECT, true);
 
@@ -854,7 +855,36 @@ class ApiController extends BaseController
             curl_setopt($ch, CURLOPT_PROXYUSERPWD, 'brd-customer-hl_e5f2315f-zone-datacenter_proxy1-country-nl:uvmqoi66peju');
         }
 
-        return @curl_exec($ch);
+        $html = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $effectiveUrl = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
+        $redirectCount = curl_getinfo($ch, CURLINFO_REDIRECT_COUNT);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+        
+        // Detailed logging
+        if ($redirectCount > 0) {
+            $this->logMessage("cURL: Redirected {$redirectCount} time(s). Final URL: {$effectiveUrl}", 'DEBUG');
+        }
+        
+        if ($curlError) {
+            $this->logMessage("cURL Error: {$curlError} (HTTP {$httpCode}) for URL: {$url}", 'ERROR');
+            return false;
+        }
+        
+        if ($httpCode >= 400) {
+            $this->logMessage("cURL: HTTP {$httpCode} error for URL: {$url}", 'ERROR');
+            return false;
+        }
+        
+        if (!$html) {
+            $this->logMessage("cURL: Empty response (HTTP {$httpCode}) for URL: {$url}", 'ERROR');
+            return false;
+        }
+        
+        $this->logMessage("cURL: Success - HTTP {$httpCode}, " . strlen($html) . " bytes, {$redirectCount} redirects", 'DEBUG');
+
+        return $html;
     }
     
     /**
@@ -1228,6 +1258,8 @@ class ApiController extends BaseController
         $price_pattern1 = 'Şu anki fiyat ';
         $price = $this->search($price_pattern1, '&nbsp;', $html);
         
+        $this->logMessage("Hotels.com: Pattern 1 (Şu anki fiyat) - Found: " . (empty($price) ? 'NO' : 'YES (' . $price[0] . ')'), 'DEBUG');
+        
         if (!empty($price)) {
             // Clean price: remove dots, commas, spaces
             $finalPrice = round(str_replace([".", ",", " "], "", trim($price[0])));
@@ -1246,6 +1278,8 @@ class ApiController extends BaseController
         $price_pattern2 = '"displayPrice":"' . $currency_symbol;
         $price = $this->search($price_pattern2, '"', $html);
         
+        $this->logMessage("Hotels.com: Pattern 2 (displayPrice) - Found: " . (empty($price) ? 'NO' : 'YES (' . $price[0] . ')'), 'DEBUG');
+        
         if (!empty($price)) {
             $finalPrice = round(preg_replace('/\xc2\xa0/', "", str_replace([".", ",", " "], "", trim($price[0]))));
             $this->logMessage("Hotels.com: Found price pattern 2 (displayPrice) - " . $finalPrice . " " . $currency, 'INFO');
@@ -1260,6 +1294,8 @@ class ApiController extends BaseController
         // Pattern 3: "formattedPrice":"TL X.XXX"
         $price_pattern3 = '"formattedPrice":"' . $currency_symbol;
         $price = $this->search($price_pattern3, '"', $html);
+        
+        $this->logMessage("Hotels.com: Pattern 3 (formattedPrice) - Found: " . (empty($price) ? 'NO' : 'YES (' . $price[0] . ')'), 'DEBUG');
         
         if (!empty($price)) {
             $finalPrice = round(preg_replace('/\xc2\xa0/', "", str_replace([".", ",", " "], "", trim($price[0]))));
@@ -1276,6 +1312,8 @@ class ApiController extends BaseController
         $price_pattern4 = '"amount":';
         $price = $this->search($price_pattern4, ',', $html);
         
+        $this->logMessage("Hotels.com: Pattern 4 (amount) - Found: " . (empty($price) ? 'NO' : 'YES (' . $price[0] . ')'), 'DEBUG');
+        
         if (!empty($price)) {
             $finalPrice = round(trim($price[0]));
             if (is_numeric($finalPrice) && $finalPrice > 0) {
@@ -1290,7 +1328,8 @@ class ApiController extends BaseController
         }
         
         $this->logMessage("Hotels.com: No price found with any pattern", 'WARNING');
-        $this->logChannelError('hotels', "No price found with any pattern for URL: {$search_url}");
+        $this->logMessage("Hotels.com: HTML Preview (first 500 chars): " . substr($html, 0, 500), 'DEBUG');
+        $this->logChannelError('hotels', "No price found with any pattern for URL: {$search_url}. HTML length: " . strlen($html));
         return "NA";
     }
     
