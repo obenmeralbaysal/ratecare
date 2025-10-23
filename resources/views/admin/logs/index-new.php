@@ -5,7 +5,7 @@
 @section('menu-logs', 'active')
 
 @section('content')
- <div class="container">
+ <div class="container p-4">
         <div class="block-header">
             <div class="row clearfix">
                 <div class="col-lg-6 col-md-6 col-sm-12">
@@ -125,7 +125,7 @@
             window.location.href = '<?php echo url('/admin/logs'); ?>?file=' + encodeURIComponent(selectedFile);
         }
     }
-    
+
     function refreshLog() {
         window.location.reload();
     }
