@@ -21,15 +21,19 @@ class ApiStatistics
     }
     
     /**
-     * Log API request with cache and platform information
+     * Log API request with cache performance data and error tracking
      * 
      * @param string $widgetCode Widget identifier
      * @param array $params Request parameters
-     * @param string $cacheHitType 'full', 'partial', or 'miss'
+     * @param string $cacheHitType Cache hit type: 'full', 'partial', 'miss'
      * @param array|null $cachedPlatforms Platforms read from cache
-     * @param array|null $requestedPlatforms Platforms requested from APIs
+     * @param array|null $requestedPlatforms Platforms requested from API
      * @param array|null $updatedPlatforms Platforms updated in cache
      * @param int|null $responseTimeMs Response time in milliseconds
+     * @param string|null $channel Main channel/platform used (booking, hotels, etc.)
+     * @param bool $hasError Whether any API errors occurred
+     * @param array|null $errorPlatforms Platforms that returned errors
+     * @param string|null $errorMessage Error details if any
      */
     public function logRequest(
         string $widgetCode,
@@ -38,12 +42,17 @@ class ApiStatistics
         ?array $cachedPlatforms = null,
         ?array $requestedPlatforms = null,
         ?array $updatedPlatforms = null,
-        ?int $responseTimeMs = null
+        ?int $responseTimeMs = null,
+        ?string $channel = null,
+        bool $hasError = false,
+        ?array $errorPlatforms = null,
+        ?string $errorMessage = null
     ): bool {
         try {
             $stmt = $this->pdo->prepare("
                 INSERT INTO api_statistics (
                     widget_code,
+                    channel,
                     request_date,
                     request_time,
                     parameters,
@@ -51,14 +60,18 @@ class ApiStatistics
                     cached_platforms,
                     requested_platforms,
                     updated_platforms,
-                    response_time_ms
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    response_time_ms,
+                    has_error,
+                    error_platforms,
+                    error_message
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             
             $now = time();
             
             return $stmt->execute([
                 $widgetCode,
+                $channel,
                 date('Y-m-d', $now),
                 date('H:i:s', $now),
                 json_encode($params),
@@ -66,7 +79,10 @@ class ApiStatistics
                 $cachedPlatforms ? json_encode($cachedPlatforms) : null,
                 $requestedPlatforms ? json_encode($requestedPlatforms) : null,
                 $updatedPlatforms ? json_encode($updatedPlatforms) : null,
-                $responseTimeMs
+                $responseTimeMs,
+                $hasError ? 1 : 0,
+                $errorPlatforms ? json_encode($errorPlatforms) : null,
+                $errorMessage
             ]);
             
         } catch (\Exception $e) {

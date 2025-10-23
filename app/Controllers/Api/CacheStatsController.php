@@ -238,13 +238,13 @@ class CacheStatsController extends BaseController
     private function getMostStableChannel($dateFrom, $dateTo)
     {
         try {
-            $sql = "SELECT channel, 
+            // Query for channel with lowest error rate (most stable)
+            $sql = "SELECT channel,
                     COUNT(*) as total_requests,
-                    SUM(CASE WHEN miss_count > 0 THEN 1 ELSE 0 END) as error_requests,
-                    (SUM(CASE WHEN miss_count > 0 THEN 1 ELSE 0 END) / COUNT(*)) * 100 as error_rate
+                    ROUND((SUM(has_error) / COUNT(*)) * 100, 2) as error_rate
                     FROM api_statistics 
                     WHERE DATE(created_at) BETWEEN ? AND ?
-                    AND channel IS NOT NULL
+                    AND channel IS NOT NULL 
                     AND channel != ''
                     GROUP BY channel
                     HAVING total_requests >= 10
@@ -259,6 +259,16 @@ class CacheStatsController extends BaseController
             
             return 'N/A';
         } catch (\Exception $e) {
+            // If migration not run yet, fallback to most used channel
+            error_log("Most stable channel query failed: " . $e->getMessage());
+            try {
+                $channelUsage = $this->statistics->getChannelUsage($dateFrom, $dateTo);
+                if (!empty($channelUsage)) {
+                    return ucfirst(array_key_first($channelUsage));
+                }
+            } catch (\Exception $ex) {
+                // Ignore fallback error
+            }
             return 'N/A';
         }
     }
@@ -269,14 +279,17 @@ class CacheStatsController extends BaseController
     private function getChannelErrorRates($dateFrom, $dateTo)
     {
         try {
-            $sql = "SELECT channel, 
+            // Query real error data from database (after migration)
+            $sql = "SELECT 
+                    channel,
                     COUNT(*) as total_requests,
-                    SUM(CASE WHEN miss_count > 0 THEN 1 ELSE 0 END) as error_requests,
-                    ROUND((SUM(CASE WHEN miss_count > 0 THEN 1 ELSE 0 END) / COUNT(*)) * 100, 2) as error_rate,
-                    ROUND((1 - (SUM(CASE WHEN miss_count > 0 THEN 1 ELSE 0 END) / COUNT(*))) * 100, 2) as success_rate
+                    SUM(has_error) as error_requests,
+                    ROUND((SUM(has_error) / COUNT(*)) * 100, 2) as error_rate,
+                    ROUND((SUM(CASE WHEN has_error = 0 THEN 1 ELSE 0 END) / COUNT(*)) * 100, 2) as success_rate,
+                    AVG(response_time_ms) as avg_response_time
                     FROM api_statistics 
                     WHERE DATE(created_at) BETWEEN ? AND ?
-                    AND channel IS NOT NULL
+                    AND channel IS NOT NULL 
                     AND channel != ''
                     GROUP BY channel
                     HAVING total_requests >= 5
@@ -286,18 +299,22 @@ class CacheStatsController extends BaseController
             
             $channelErrors = [];
             foreach ($result as $row) {
+                $errorRate = (float)$row['error_rate'];
                 $channelErrors[] = [
                     'channel' => ucfirst($row['channel']),
                     'total_requests' => (int)$row['total_requests'],
                     'error_requests' => (int)$row['error_requests'],
-                    'error_rate' => (float)$row['error_rate'],
+                    'error_rate' => $errorRate,
                     'success_rate' => (float)$row['success_rate'],
-                    'status' => $row['error_rate'] > 20 ? 'critical' : ($row['error_rate'] > 10 ? 'warning' : 'healthy')
+                    'avg_response_time' => round((float)$row['avg_response_time'], 0),
+                    'status' => $errorRate > 20 ? 'critical' : ($errorRate > 10 ? 'warning' : 'healthy')
                 ];
             }
             
             return $channelErrors;
         } catch (\Exception $e) {
+            // If migration not run yet or no data, return empty
+            error_log("Channel error rates query failed: " . $e->getMessage());
             return [];
         }
     }
