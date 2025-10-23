@@ -770,6 +770,29 @@ class ApiController extends BaseController
     }
     
     /**
+     * Detect channel/platform from URL
+     * Returns channel name or null if not detected
+     */
+    private function detectChannelFromUrl($url)
+    {
+        if (stripos($url, 'booking.com') !== false) {
+            return 'booking';
+        } else if (stripos($url, 'hotels.com') !== false) {
+            return 'hotels';
+        } else if (stripos($url, 'tatilsepeti.com') !== false) {
+            return 'tatilsepeti';
+        } else if (stripos($url, 'otelz.com') !== false) {
+            return 'otelz';
+        } else if (stripos($url, 'sabeeapp.com') !== false) {
+            return 'sabeeapp';
+        } else if (stripos($url, 'etstur.com') !== false) {
+            return 'etstur';
+        }
+        
+        return null;
+    }
+    
+    /**
      * Channel-specific daily error log
      * Creates separate log files per platform per day in /storage/logs/
      * Example: sabeeapp_2025-10-23.log, booking_2025-10-23.log
@@ -867,18 +890,47 @@ class ApiController extends BaseController
             $this->logMessage("cURL: Redirected {$redirectCount} time(s). Final URL: {$effectiveUrl}", 'DEBUG');
         }
         
+        // Detect platform from URL for channel-specific logging
+        $channel = $this->detectChannelFromUrl($url);
+        
         if ($curlError) {
-            $this->logMessage("cURL Error: {$curlError} (HTTP {$httpCode}) for URL: {$url}", 'ERROR');
+            // Special handling for proxy errors
+            if (strpos($curlError, 'proxy') !== false || strpos($curlError, 'Proxy') !== false) {
+                $this->logMessage("cURL Proxy Error: {$curlError} (HTTP {$httpCode}) for URL: {$url}", 'ERROR');
+                $this->logMessage("cURL: Proxy might be down or blocked. Consider retry or fallback.", 'WARNING');
+                if ($channel) {
+                    $this->logChannelError($channel, "Proxy Error: {$curlError} (HTTP {$httpCode})");
+                }
+            } else {
+                $this->logMessage("cURL Error: {$curlError} (HTTP {$httpCode}) for URL: {$url}", 'ERROR');
+                if ($channel) {
+                    $this->logChannelError($channel, "cURL Error: {$curlError} (HTTP {$httpCode})");
+                }
+            }
             return false;
         }
         
-        if ($httpCode >= 400) {
-            $this->logMessage("cURL: HTTP {$httpCode} error for URL: {$url}", 'ERROR');
+        if ($httpCode >= 500) {
+            // Server errors (500, 502, 503, etc.)
+            $this->logMessage("cURL: Server Error HTTP {$httpCode} for URL: {$url} - Server/Proxy is having issues", 'ERROR');
+            if ($channel) {
+                $this->logChannelError($channel, "HTTP {$httpCode} Server Error - Server/Proxy issues");
+            }
+            return false;
+        } else if ($httpCode >= 400) {
+            // Client errors (400, 403, 404, etc.)
+            $this->logMessage("cURL: Client Error HTTP {$httpCode} for URL: {$url} - Check URL or permissions", 'ERROR');
+            if ($channel) {
+                $this->logChannelError($channel, "HTTP {$httpCode} Client Error - Check URL or permissions");
+            }
             return false;
         }
         
         if (!$html) {
             $this->logMessage("cURL: Empty response (HTTP {$httpCode}) for URL: {$url}", 'ERROR');
+            if ($channel) {
+                $this->logChannelError($channel, "Empty response (HTTP {$httpCode})");
+            }
             return false;
         }
         
@@ -1141,14 +1193,35 @@ class ApiController extends BaseController
                 $currency_symbol = "TL";
         }
         
-        // Use only proxy method (type=2)
+        // Use proxy method with retry logic
         $this->logMessage("Booking.com: Using proxy method only", 'DEBUG');
         
-        $html = $this->getHTML($search_url, 30, 2);
+        $html = false;
+        $maxRetries = 2; // Try up to 2 times
+        $retryDelay = 2; // Wait 2 seconds between retries
+        
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            if ($attempt > 1) {
+                $this->logMessage("Booking.com: Retry attempt {$attempt}/{$maxRetries} after {$retryDelay}s delay", 'INFO');
+                sleep($retryDelay);
+            }
+            
+            $html = $this->getHTML($search_url, 30, 2);
+            
+            if ($html !== false) {
+                if ($attempt > 1) {
+                    $this->logMessage("Booking.com: Success on retry attempt {$attempt}", 'INFO');
+                }
+                break; // Success, exit retry loop
+            }
+            
+            $this->logMessage("Booking.com: Attempt {$attempt} failed", 'WARNING');
+            $this->logChannelError('booking', "Attempt {$attempt}/{$maxRetries} failed", 'WARNING');
+        }
         
         if (!$html) {
-            $this->logMessage("Booking.com: Failed to fetch HTML with proxy method", 'ERROR');
-            $this->logChannelError('booking', "Failed to fetch HTML for URL: {$search_url}");
+            $this->logMessage("Booking.com: Failed to fetch HTML after {$maxRetries} attempts", 'ERROR');
+            $this->logChannelError('booking', "Failed to fetch HTML after {$maxRetries} attempts for URL: {$search_url}");
             return "NA";
         }
         
@@ -1202,7 +1275,7 @@ class ApiController extends BaseController
         }
         
         $this->logMessage("Booking.com: No price found with proxy method", 'WARNING');
-        $this->logChannelError('booking', "No price found for URL: {$search_url}");
+        $this->logChannelError('booking', "No price found for URL: {$search_url}", 'WARNING');
         return "NA";
     }
     
@@ -1238,14 +1311,35 @@ class ApiController extends BaseController
                 $currency_symbol = "TL";
         }
         
-        // Use proxy method only (type=2) - same as Booking.com
+        // Use proxy method with retry logic
         $this->logMessage("Hotels.com: Using proxy method", 'DEBUG');
         
-        $html = $this->getHTML($search_url, 30, 2);
+        $html = false;
+        $maxRetries = 2; // Try up to 2 times
+        $retryDelay = 2; // Wait 2 seconds between retries
+        
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            if ($attempt > 1) {
+                $this->logMessage("Hotels.com: Retry attempt {$attempt}/{$maxRetries} after {$retryDelay}s delay", 'INFO');
+                sleep($retryDelay);
+            }
+            
+            $html = $this->getHTML($search_url, 30, 2);
+            
+            if ($html !== false) {
+                if ($attempt > 1) {
+                    $this->logMessage("Hotels.com: Success on retry attempt {$attempt}", 'INFO');
+                }
+                break; // Success, exit retry loop
+            }
+            
+            $this->logMessage("Hotels.com: Attempt {$attempt} failed", 'WARNING');
+            $this->logChannelError('hotels', "Attempt {$attempt}/{$maxRetries} failed", 'WARNING');
+        }
         
         if (!$html) {
-            $this->logMessage("Hotels.com: Failed to fetch HTML with proxy method", 'ERROR');
-            $this->logChannelError('hotels', "Failed to fetch HTML for URL: {$search_url}");
+            $this->logMessage("Hotels.com: Failed to fetch HTML after {$maxRetries} attempts", 'ERROR');
+            $this->logChannelError('hotels', "Failed to fetch HTML after {$maxRetries} attempts for URL: {$search_url}");
             return "NA";
         }
         
@@ -1329,7 +1423,7 @@ class ApiController extends BaseController
         
         $this->logMessage("Hotels.com: No price found with any pattern", 'WARNING');
         $this->logMessage("Hotels.com: HTML Preview (first 500 chars): " . substr($html, 0, 500), 'DEBUG');
-        $this->logChannelError('hotels', "No price found with any pattern for URL: {$search_url}. HTML length: " . strlen($html));
+        $this->logChannelError('hotels', "No price found with any pattern for URL: {$search_url}. HTML length: " . strlen($html), 'WARNING');
         return "NA";
     }
     
@@ -1422,6 +1516,7 @@ class ApiController extends BaseController
             }
             
             $this->logMessage("TatilSepeti: No valid price found in roomList", 'WARNING');
+            $this->logChannelError('tatilsepeti', "No valid price found in roomList for URL: {$url}", 'WARNING');
             return "NA";
             
         } catch (\Exception $e) {
@@ -1504,6 +1599,7 @@ class ApiController extends BaseController
         $sabeeApiKey = env('SABEE_API_KEY');
         if (!$sabeeApiKey) {
             $this->logMessage("Sabee API: API key not configured", 'WARNING');
+            $this->logChannelError('sabeeapp', 'API key not configured', 'WARNING');
             return "NA";
         }
         
@@ -1512,6 +1608,7 @@ class ApiController extends BaseController
             $roomTypes = $this->getSabeeRooms($sabeeHotelId, $sabeeApiKey);
             if (empty($roomTypes)) {
                 $this->logMessage("Sabee API: No room types found for hotel {$sabeeHotelId}", 'WARNING');
+                $this->logChannelError('sabeeapp', "No room types found for hotel {$sabeeHotelId}", 'WARNING');
                 return "NA";
             }
             
@@ -1551,6 +1648,7 @@ class ApiController extends BaseController
                 
                 if (empty($prices)) {
                     $this->logMessage("Sabee API: No valid prices found for hotel {$sabeeHotelId}", 'WARNING');
+                    $this->logChannelError('sabeeapp', "No valid prices found for hotel {$sabeeHotelId}", 'WARNING');
                     return "NA";
                 }
                 
@@ -1571,6 +1669,7 @@ class ApiController extends BaseController
                 ];
             } else {
                 $this->logMessage("Sabee API: Invalid response or no room rates for hotel {$sabeeHotelId}", 'WARNING');
+                $this->logChannelError('sabeeapp', "Invalid response or no room rates for hotel {$sabeeHotelId}", 'WARNING');
                 return "NA";
             }
             
@@ -1600,6 +1699,7 @@ class ApiController extends BaseController
             
             if ($hotelIndex === false) {
                 $this->logMessage("Sabee API: Hotel {$sabeeHotelId} not found in inventory", 'WARNING');
+                $this->logChannelError('sabeeapp', "Hotel {$sabeeHotelId} not found in inventory", 'WARNING');
                 return [];
             }
             
@@ -1759,6 +1859,7 @@ class ApiController extends BaseController
         // Check JSON decode error
         if (json_last_error() !== JSON_ERROR_NONE) {
             $this->logMessage("OtelZ API JSON decode error: " . json_last_error_msg(), 'ERROR');
+            $this->logChannelError('otelz', "JSON decode error: " . json_last_error_msg() . " for facility: {$facilityID}");
             return "NA";
         }
 
