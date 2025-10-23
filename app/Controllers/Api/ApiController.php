@@ -844,38 +844,54 @@ class ApiController extends BaseController
     }
     
     /**
-     * Get HTML content via cURL with detailed logging
+     * Get HTML content via cURL with detailed logging and realistic browser headers
      */
     private function getHTML($url, $timeout = 30, $type = 0)
     {
-        $header = [];
-        $header[0] = "Accept: text/xml,application/xml,application/xhtml+xml,";
-        $header[0] .= "text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5";
-        $header[0] = "Cache-Control: max-age=0";
-        $header[] = "Connection: keep-alive";
-        $header[] = "Keep-Alive: 300";
-        $header[] = "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7";
-        $header[] = "Pragma: ";
+        // Modern, realistic browser headers to avoid bot detection
+        $header = [
+            "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "Accept-Language: tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Accept-Encoding: gzip, deflate, br",
+            "Cache-Control: max-age=0",
+            "Connection: keep-alive",
+            "Upgrade-Insecure-Requests: 1",
+            "Sec-Fetch-Dest: document",
+            "Sec-Fetch-Mode: navigate",
+            "Sec-Fetch-Site: none",
+            "Sec-Fetch-User: ?1",
+            "sec-ch-ua: \"Chromium\";v=\"118\", \"Google Chrome\";v=\"118\", \"Not=A?Brand\";v=\"99\"",
+            "sec-ch-ua-mobile: ?0",
+            "sec-ch-ua-platform: \"Windows\""
+        ];
 
         $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0");
+        
+        // Modern Chrome user agent
+        $userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36';
+        
+        curl_setopt($ch, CURLOPT_USERAGENT, $userAgent);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_MAXREDIRS, 10); // Max 10 redirects
+        curl_setopt($ch, CURLOPT_MAXREDIRS, 10);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
-        curl_setopt($ch, CURLOPT_FAILONERROR, 0); // Don't fail on HTTP errors, handle manually
-        curl_setopt($ch, CURLOPT_COOKIESESSION, true);
-        curl_setopt($ch, CURLOPT_FRESH_CONNECT, true);
+        curl_setopt($ch, CURLOPT_FAILONERROR, 0);
+        curl_setopt($ch, CURLOPT_ENCODING, ""); // Handle gzip/deflate automatically
+        curl_setopt($ch, CURLOPT_AUTOREFERER, true); // Auto set referer on redirects
+        
+        // Cookie handling for session persistence
+        curl_setopt($ch, CURLOPT_COOKIEJAR, sys_get_temp_dir() . '/cookies.txt');
+        curl_setopt($ch, CURLOPT_COOKIEFILE, sys_get_temp_dir() . '/cookies.txt');
 
         if ($type == 2) {
+            // Proxy mode
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 0);
-            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0');
-            curl_setopt($ch, CURLOPT_POST, 0);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 60); // Increased timeout for proxy
             curl_setopt($ch, CURLOPT_PROXY, 'brd.superproxy.io:22225');
             curl_setopt($ch, CURLOPT_PROXYUSERPWD, 'brd-customer-hl_e5f2315f-zone-datacenter_proxy1-country-nl:uvmqoi66peju');
+            curl_setopt($ch, CURLOPT_HTTPPROXYTUNNEL, 1);
         }
 
         $html = curl_exec($ch);
@@ -915,6 +931,13 @@ class ApiController extends BaseController
             $this->logMessage("cURL: Server Error HTTP {$httpCode} for URL: {$url} - Server/Proxy is having issues", 'ERROR');
             if ($channel) {
                 $this->logChannelError($channel, "HTTP {$httpCode} Server Error - Server/Proxy issues");
+            }
+            return false;
+        } else if ($httpCode == 429) {
+            // Rate limiting - Too Many Requests
+            $this->logMessage("cURL: HTTP 429 Rate Limiting for URL: {$url} - Too many requests. Retry with backoff.", 'WARNING');
+            if ($channel) {
+                $this->logChannelError($channel, "HTTP 429 Rate Limiting - Too many requests. Using exponential backoff.", 'WARNING');
             }
             return false;
         } else if ($httpCode >= 400) {
@@ -1193,17 +1216,23 @@ class ApiController extends BaseController
                 $currency_symbol = "TL";
         }
         
-        // Use proxy method with retry logic
+        // Use proxy method with retry logic and exponential backoff
         $this->logMessage("Booking.com: Using proxy method only", 'DEBUG');
         
         $html = false;
-        $maxRetries = 2; // Try up to 2 times
-        $retryDelay = 2; // Wait 2 seconds between retries
+        $maxRetries = 3; // Try up to 3 times for rate limiting
+        $baseDelay = 3; // Base delay in seconds
         
         for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
             if ($attempt > 1) {
-                $this->logMessage("Booking.com: Retry attempt {$attempt}/{$maxRetries} after {$retryDelay}s delay", 'INFO');
-                sleep($retryDelay);
+                // Exponential backoff with random jitter for rate limiting
+                $exponentialDelay = $baseDelay * pow(2, $attempt - 2); // 3, 6, 12 seconds
+                $jitter = rand(0, 1000) / 1000; // 0-1 second random
+                $retryDelay = $exponentialDelay + $jitter;
+                
+                $this->logMessage("Booking.com: Retry attempt {$attempt}/{$maxRetries} after {$retryDelay}s delay (exponential backoff)", 'INFO');
+                sleep((int)$retryDelay);
+                usleep((int)(($retryDelay - (int)$retryDelay) * 1000000)); // Microseconds for jitter
             }
             
             $html = $this->getHTML($search_url, 30, 2);
@@ -1311,17 +1340,23 @@ class ApiController extends BaseController
                 $currency_symbol = "TL";
         }
         
-        // Use proxy method with retry logic
+        // Use proxy method with retry logic and exponential backoff
         $this->logMessage("Hotels.com: Using proxy method", 'DEBUG');
         
         $html = false;
-        $maxRetries = 2; // Try up to 2 times
-        $retryDelay = 2; // Wait 2 seconds between retries
+        $maxRetries = 3; // Try up to 3 times for rate limiting
+        $baseDelay = 3; // Base delay in seconds
         
         for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
             if ($attempt > 1) {
-                $this->logMessage("Hotels.com: Retry attempt {$attempt}/{$maxRetries} after {$retryDelay}s delay", 'INFO');
-                sleep($retryDelay);
+                // Exponential backoff with random jitter for rate limiting
+                $exponentialDelay = $baseDelay * pow(2, $attempt - 2); // 3, 6, 12 seconds
+                $jitter = rand(0, 1000) / 1000; // 0-1 second random
+                $retryDelay = $exponentialDelay + $jitter;
+                
+                $this->logMessage("Hotels.com: Retry attempt {$attempt}/{$maxRetries} after {$retryDelay}s delay (exponential backoff)", 'INFO');
+                sleep((int)$retryDelay);
+                usleep((int)(($retryDelay - (int)$retryDelay) * 1000000)); // Microseconds for jitter
             }
             
             $html = $this->getHTML($search_url, 30, 2);
