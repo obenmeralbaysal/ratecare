@@ -179,6 +179,9 @@ class ApiController extends BaseController
                         $this->requestSinglePlatform($response, $hotel, $platform, $currency, $checkIn, $checkOut, $adult);
                     }
                     
+                    // De-duplicate before caching
+                    $response = $this->deduplicatePlatforms($response);
+                    
                     // Update cache with new data
                     $this->cache->set($cacheKey, $response, $widgetCode, $params);
                     
@@ -223,6 +226,9 @@ class ApiController extends BaseController
                 
                 // Track requested platforms
                 $requestedPlatforms = $this->getActivePlatformNames($response);
+                
+                // De-duplicate before caching
+                $response = $this->deduplicatePlatforms($response);
                 
                 // Save to cache
                 $this->cache->set($cacheKey, $response, $widgetCode, $params);
@@ -2131,8 +2137,49 @@ class ApiController extends BaseController
     }
     
     /**
-     * Remove failed platforms from cached data
+     * De-duplicate platforms in response
+     * Keep only the first occurrence of each platform
+     * 
+     * @param array $response Response data
+     * @return array De-duplicated response data
+     */
+    private function deduplicatePlatforms(array $response): array
+    {
+        if (!isset($response['data']['platforms']) || !is_array($response['data']['platforms'])) {
+            return $response;
+        }
+        
+        $uniquePlatforms = [];
+        $seenPlatforms = [];
+        $duplicateCount = 0;
+        
+        foreach ($response['data']['platforms'] as $platform) {
+            $platformName = $platform['name'] ?? 'unknown';
+            
+            // Skip if we've already seen this platform
+            if (isset($seenPlatforms[$platformName])) {
+                $duplicateCount++;
+                $this->logMessage("De-duplication: Skipping duplicate platform - {$platformName}", 'WARNING');
+                continue;
+            }
+            
+            // Add to unique list and mark as seen
+            $uniquePlatforms[] = $platform;
+            $seenPlatforms[$platformName] = true;
+        }
+        
+        if ($duplicateCount > 0) {
+            $this->logMessage("De-duplication: Removed {$duplicateCount} duplicate platform(s)", 'INFO');
+        }
+        
+        $response['data']['platforms'] = $uniquePlatforms;
+        return $response;
+    }
+    
+    /**
+     * Remove failed platforms from cached data and de-duplicate
      * Failed platforms should not persist in cache
+     * Duplicate platforms should only show once
      * 
      * @param array $cachedData Cached response data
      * @return array Cleaned response data
@@ -2144,11 +2191,20 @@ class ApiController extends BaseController
         }
         
         $cleanedPlatforms = [];
+        $seenPlatforms = [];
         $removedCount = 0;
+        $duplicateCount = 0;
         
         foreach ($cachedData['data']['platforms'] as $platform) {
             $shouldRemove = false;
             $platformName = $platform['name'] ?? 'unknown';
+            
+            // Check for duplicates - keep only first occurrence
+            if (isset($seenPlatforms[$platformName])) {
+                $duplicateCount++;
+                $this->logMessage("Cache: Removing duplicate platform - {$platformName}", 'WARNING');
+                continue; // Skip this duplicate
+            }
             
             // Remove if status is failed/error
             if (isset($platform['status']) && 
@@ -2168,14 +2224,16 @@ class ApiController extends BaseController
                 $this->logMessage("Cache: Removing failed platform from cache - {$platformName}", 'INFO');
                 $removedCount++;
             } else {
+                // Add to cleaned list and mark as seen
                 $cleanedPlatforms[] = $platform;
+                $seenPlatforms[$platformName] = true;
             }
         }
         
         $cachedData['data']['platforms'] = $cleanedPlatforms;
         
-        if ($removedCount > 0) {
-            $this->logMessage("Cache: Cleaned {$removedCount} failed platform(s) from cache", 'INFO');
+        if ($removedCount > 0 || $duplicateCount > 0) {
+            $this->logMessage("Cache: Cleaned {$removedCount} failed + {$duplicateCount} duplicate platform(s)", 'INFO');
         }
         
         return $cachedData;
