@@ -441,7 +441,7 @@ class ApiController extends BaseController
     private function addHotelsPlatform(&$response, $hotel, $currency, $checkIn, $checkOut, $adult)
     {
         if ($hotel['hotels_is_active'] && !empty($hotel['hotels_url'])) {
-            $price = $this->getHotelsPrice($hotel, $currency, $checkIn, $checkOut);
+            $price = $this->getHotelsPrice($hotel, $currency, $checkIn, $checkOut, $adult);
             $this->addPlatformToResponse($response, 'hotels', 'Hotels.com', $price, $hotel['hotels_url'], $currency);
         }
     }
@@ -661,9 +661,9 @@ class ApiController extends BaseController
         return $finalUrl;
     }
     
-    private function getHotelsPrice($hotel, $currency, $checkIn, $checkOut)
+    private function getHotelsPrice($hotel, $currency, $checkIn, $checkOut, $adult = 2, $children = 0)
     {
-        return $this->getHotelsPriceReal($hotel['hotels_url'], $currency, $checkIn, $checkOut);
+        return $this->getHotelsPriceReal($hotel['hotels_url'], $currency, $checkIn, $checkOut, $adult, $children);
     }
     
     private function getTatilSepetiPrice($hotel, $currency, $checkIn, $checkOut)
@@ -1143,225 +1143,118 @@ class ApiController extends BaseController
     }
     
     /**
-     * Get Hotels.com price via GraphQL API
+     * Get Hotels.com price via proxy scraping (like Booking.com)
+     * URL format: https://tr.hotels.com/ho{PROPERTY_ID}/?chkin=YYYY-MM-DD&chkout=YYYY-MM-DD&top_cur=CUR&rm1=a{ADULTS}%3Ac{CHILDREN}
      */
-    private function getHotelsPriceReal($url, $currency, $startDate, $endDate)
+    private function getHotelsPriceReal($url, $currency, $checkinDate, $checkoutDate, $adults = 2, $children = 0)
     {
-        $this->logMessage("Hotels.com API: Starting price request for URL {$url}, currency {$currency}, dates {$startDate} to {$endDate}", 'INFO');
+        $this->logMessage("Hotels.com: Starting price request for URL {$url}, currency {$currency}, dates {$checkinDate} to {$checkoutDate}, adults {$adults}", 'INFO');
         
         if (empty($url)) {
             $this->logMessage("Hotels.com: Empty URL provided", 'ERROR');
             return "NA";
         }
         
-        try {
-            // Parse URL and update query parameters
-            $pathInfo = parse_url($url);
-            if (!array_key_exists("query", $pathInfo)) {
-                $this->logMessage("Hotels.com: No query parameters in URL", 'ERROR');
-                return "NA";
-            }
-            
-            $queryString = $pathInfo["query"];
-            parse_str($queryString, $queryArray);
-            $queryArray["chkin"] = $startDate;
-            $queryArray["chkout"] = $endDate;
-            $newQueryStr = http_build_query($queryArray);
-            $newUrl = "https://" . $pathInfo["host"] . $pathInfo["path"] . "?" . $newQueryStr;
-            
-            $this->logMessage("Hotels.com: Updated URL - " . $newUrl, 'DEBUG');
-            
-            // Extract property ID from URL for GraphQL query
-            $propertyId = $this->extractHotelsPropertyId($url);
-            if (!$propertyId) {
-                $this->logMessage("Hotels.com: Could not extract property ID from URL", 'ERROR');
-                return "NA";
-            }
-            
-            // Prepare GraphQL query
-            $graphqlQuery = $this->buildHotelsGraphQLQuery($propertyId, $startDate, $endDate);
-            
-            $headers = [
-                'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept: */*',
-                'Accept-Language: tr-TR,tr;q=0.9,en;q=0.8',
-                'Accept-Encoding: gzip, deflate, br',
-                'Content-Type: application/json',
-                'Client-Info: shopping-pwa,743f46197f3b193f505182af7292a80dd14e979b,us-west-2',
-                'X-Product-Line: lodging',
-                'X-Page-Id: page.Hotels.Infosite.Information,H,30',
-                'Origin: https://tr.hotels.com',
-                'Referer: ' . $newUrl
-            ];
-            
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, 'https://tr.hotels.com/graphql');
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $graphqlQuery);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-            
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-            
-            if (!$response || $httpCode !== 200) {
-                $this->logMessage("Hotels.com: HTTP error {$httpCode} or empty response", 'ERROR');
-                return "NA";
-            }
-            
-            $decodedResponse = json_decode($response, true);
-            
-            if (!$decodedResponse || !isset($decodedResponse[0]["data"]["propertyOffers"]["stickyBar"])) {
-                $this->logMessage("Hotels.com: Invalid response structure or no stickyBar", 'WARNING');
-                return "NA";
-            }
-            
-            if ($decodedResponse[0]["data"]["propertyOffers"]["stickyBar"] == null) {
-                $this->logMessage("Hotels.com: No offers available (stickyBar is null)", 'INFO');
-                return "NA";
-            }
-            
-            // Extract price from response
-            $priceData = $decodedResponse[0]["data"]["propertyOffers"]["stickyBar"]["price"];
-            if (!isset($priceData["formattedDisplayPrice"])) {
-                $this->logMessage("Hotels.com: No formatted display price found", 'WARNING');
-                return "NA";
-            }
-            
-            $price = $priceData["formattedDisplayPrice"];
-            $price = trim(str_replace(["TL", "₺", "€", "$"], "", $price));
-            $price = str_replace([".", ",", " "], "", $price);
-            $price = preg_replace('/[^0-9]/', '', $price);
-            
-            if (!is_numeric($price) || $price <= 0) {
-                $this->logMessage("Hotels.com: Invalid price extracted: " . $price, 'WARNING');
-                return "NA";
-            }
-            
-            $this->logMessage("Hotels.com: Found price {$price} TRY", 'INFO');
-            
-            // Convert to TRY if needed (Hotels.com usually returns TRY for Turkish site)
-            $finalPrice = $this->convertToTRY($price, 'TRY');
-            $this->logMessage("Hotels.com: Final price after conversion - {$finalPrice} TRY", 'INFO');
-            
-            return $finalPrice;
-            
-        } catch (\Exception $e) {
-            $this->logMessage("Hotels.com: Error - " . $e->getMessage(), 'ERROR');
+        // Build search URL with parameters
+        // Format: https://tr.hotels.com/ho{ID}/?chkin=YYYY-MM-DD&chkout=YYYY-MM-DD&top_cur=TRY&rm1=a2%3Ac0
+        $search_url = $url . "?chkin=" . $checkinDate . "&chkout=" . $checkoutDate . "&top_cur=" . $currency . "&rm1=a" . $adults . "%3Ac" . $children;
+        
+        $this->logMessage("Hotels.com: Fetching URL - " . $search_url, 'INFO');
+        
+        // Get currency symbol for price extraction
+        switch ($currency) {
+            case "EUR":
+                $currency_symbol = "€";
+                break;
+            case "USD":
+                $currency_symbol = "$";
+                break;
+            default:
+                $currency_symbol = "TL";
+        }
+        
+        // Use proxy method only (type=2) - same as Booking.com
+        $this->logMessage("Hotels.com: Using proxy method", 'DEBUG');
+        
+        $html = $this->getHTML($search_url, 30, 2);
+        
+        if (!$html) {
+            $this->logMessage("Hotels.com: Failed to fetch HTML with proxy method", 'ERROR');
             return "NA";
         }
-    }
-    
-    /**
-     * Extract property ID from Hotels.com URL
-     */
-    private function extractHotelsPropertyId($url)
-    {
-        // Try to extract property ID from URL patterns like:
-        // https://tr.hotels.com/ho534033/baldan-suites-hotel-restaurant-marmaris-turkiye/
-        if (preg_match('/\/ho(\d+)\//', $url, $matches)) {
-            return $matches[1];
+        
+        $this->logMessage("Hotels.com: HTML fetched successfully (" . strlen($html) . " bytes) with proxy method", 'DEBUG');
+        
+        // Try to find price in HTML
+        // Hotels.com typically has patterns like: "Şu anki fiyat X.XXX&nbsp;TL"
+        
+        // Pattern 1: "Şu anki fiyat X.XXX&nbsp;TL" (Primary - most reliable)
+        $price_pattern1 = 'Şu anki fiyat ';
+        $price = $this->search($price_pattern1, '&nbsp;', $html);
+        
+        if (!empty($price)) {
+            // Clean price: remove dots, commas, spaces
+            $finalPrice = round(str_replace([".", ",", " "], "", trim($price[0])));
+            if (is_numeric($finalPrice) && $finalPrice > 0) {
+                $this->logMessage("Hotels.com: Found price pattern 1 (Şu anki fiyat) - " . $finalPrice . " " . $currency, 'INFO');
+                
+                // Convert to TRY if needed
+                $tryPrice = $this->convertToTRY($finalPrice, $currency);
+                $this->logMessage("Hotels.com: Final price after conversion - " . $tryPrice . " TRY", 'INFO');
+                
+                return $tryPrice;
+            }
         }
         
-        // Try expediaPropertyId parameter
-        if (preg_match('/expediaPropertyId=(\d+)/', $url, $matches)) {
-            return $matches[1];
+        // Pattern 2: "displayPrice":"TL X.XXX" or "displayPrice":"€X.XXX"
+        $price_pattern2 = '"displayPrice":"' . $currency_symbol;
+        $price = $this->search($price_pattern2, '"', $html);
+        
+        if (!empty($price)) {
+            $finalPrice = round(preg_replace('/\xc2\xa0/', "", str_replace([".", ",", " "], "", trim($price[0]))));
+            $this->logMessage("Hotels.com: Found price pattern 2 (displayPrice) - " . $finalPrice . " " . $currency, 'INFO');
+            
+            // Convert to TRY if needed
+            $tryPrice = $this->convertToTRY($finalPrice, $currency);
+            $this->logMessage("Hotels.com: Final price after conversion - " . $tryPrice . " TRY", 'INFO');
+            
+            return $tryPrice;
         }
         
-        $this->logMessage("Hotels.com: Could not extract property ID from URL: " . $url, 'WARNING');
-        return null;
-    }
-    
-    /**
-     * Build GraphQL query for Hotels.com
-     */
-    private function buildHotelsGraphQLQuery($propertyId, $startDate, $endDate)
-    {
-        // Parse dates
-        $checkIn = date_create($startDate);
-        $checkOut = date_create($endDate);
+        // Pattern 3: "formattedPrice":"TL X.XXX"
+        $price_pattern3 = '"formattedPrice":"' . $currency_symbol;
+        $price = $this->search($price_pattern3, '"', $html);
         
-        $query = [
-            [
-                "operationName" => "PropertyOffersQuery",
-                "variables" => [
-                    "propertyId" => $propertyId,
-                    "searchCriteria" => [
-                        "primary" => [
-                            "dateRange" => [
-                                "checkInDate" => [
-                                    "day" => (int)$checkIn->format('j'),
-                                    "month" => (int)$checkIn->format('n'),
-                                    "year" => (int)$checkIn->format('Y')
-                                ],
-                                "checkOutDate" => [
-                                    "day" => (int)$checkOut->format('j'),
-                                    "month" => (int)$checkOut->format('n'),
-                                    "year" => (int)$checkOut->format('Y')
-                                ]
-                            ],
-                            "destination" => [
-                                "regionName" => "Turkey",
-                                "regionId" => "6054843"
-                            ],
-                            "rooms" => [
-                                [
-                                    "adults" => 2,
-                                    "children" => []
-                                ]
-                            ]
-                        ],
-                        "secondary" => [
-                            "counts" => [],
-                            "booleans" => [],
-                            "selections" => [
-                                [
-                                    "id" => "sort",
-                                    "value" => "RECOMMENDED"
-                                ],
-                                [
-                                    "id" => "privacyTrackingState",
-                                    "value" => "CAN_NOT_TRACK"
-                                ],
-                                [
-                                    "id" => "useRewards",
-                                    "value" => "SHOP_WITHOUT_POINTS"
-                                ]
-                            ],
-                            "ranges" => []
-                        ]
-                    ],
-                    "context" => [
-                        "siteId" => 300000028,
-                        "locale" => "tr_TR",
-                        "eapid" => 28,
-                        "currency" => "TRY",
-                        "device" => [
-                            "type" => "DESKTOP"
-                        ],
-                        "identity" => [
-                            "expUserId" => "-1",
-                            "tuid" => "-1",
-                            "authState" => "ANONYMOUS"
-                        ],
-                        "privacyTrackingState" => "CAN_TRACK"
-                    ]
-                ],
-                "extensions" => [
-                    "persistedQuery" => [
-                        "version" => 1,
-                        "sha256Hash" => "593bde3027fb0475dd6e126fd6ba54df87f2813b660a6f23b3b8ef8f2ec91a8a"
-                    ]
-                ]
-            ]
-        ];
+        if (!empty($price)) {
+            $finalPrice = round(preg_replace('/\xc2\xa0/', "", str_replace([".", ",", " "], "", trim($price[0]))));
+            $this->logMessage("Hotels.com: Found price pattern 3 (formattedPrice) - " . $finalPrice . " " . $currency, 'INFO');
+            
+            // Convert to TRY if needed
+            $tryPrice = $this->convertToTRY($finalPrice, $currency);
+            $this->logMessage("Hotels.com: Final price after conversion - " . $tryPrice . " TRY", 'INFO');
+            
+            return $tryPrice;
+        }
         
-        return json_encode($query);
+        // Pattern 4: "amount":{AMOUNT}
+        $price_pattern4 = '"amount":';
+        $price = $this->search($price_pattern4, ',', $html);
+        
+        if (!empty($price)) {
+            $finalPrice = round(trim($price[0]));
+            if (is_numeric($finalPrice) && $finalPrice > 0) {
+                $this->logMessage("Hotels.com: Found price pattern 4 (amount) - " . $finalPrice . " " . $currency, 'INFO');
+                
+                // Convert to TRY if needed
+                $tryPrice = $this->convertToTRY($finalPrice, $currency);
+                $this->logMessage("Hotels.com: Final price after conversion - " . $tryPrice . " TRY", 'INFO');
+                
+                return $tryPrice;
+            }
+        }
+        
+        $this->logMessage("Hotels.com: No price found with any pattern", 'WARNING');
+        return "NA";
     }
     
     /**
