@@ -41,8 +41,8 @@ class CacheStatsController extends BaseController
         // Get channel usage
         $channelUsage = $this->statistics->getChannelUsage($today, $today);
         
-        // Find most used channel
-        $topChannel = !empty($channelUsage) ? array_key_first($channelUsage) : 'N/A';
+        // Find most stable channel (least errors)
+        $topChannel = $this->getMostStableChannel($today, $today);
         
         return $this->json([
             'status' => 'success',
@@ -88,6 +88,9 @@ class CacheStatsController extends BaseController
             $channelLabels[] = ucfirst($channel);
             $channelValues[] = $count;
         }
+        
+        // Get channel error rates
+        $channelErrors = $this->getChannelErrorRates($weekAgo, $today);
         
         return $this->json([
             'status' => 'success',
@@ -227,5 +230,75 @@ class CacheStatsController extends BaseController
             'status' => $result ? 'success' : 'error',
             'message' => $message
         ]);
+    }
+    
+    /**
+     * Get most stable channel (least errors/failures)
+     */
+    private function getMostStableChannel($dateFrom, $dateTo)
+    {
+        try {
+            $sql = "SELECT channel, 
+                    COUNT(*) as total_requests,
+                    SUM(CASE WHEN miss_count > 0 THEN 1 ELSE 0 END) as error_requests,
+                    (SUM(CASE WHEN miss_count > 0 THEN 1 ELSE 0 END) / COUNT(*)) * 100 as error_rate
+                    FROM api_statistics 
+                    WHERE DATE(created_at) BETWEEN ? AND ?
+                    AND channel IS NOT NULL
+                    AND channel != ''
+                    GROUP BY channel
+                    HAVING total_requests >= 10
+                    ORDER BY error_rate ASC, total_requests DESC
+                    LIMIT 1";
+            
+            $result = $this->statistics->pdo->query($sql, [$dateFrom, $dateTo]);
+            
+            if (!empty($result) && isset($result[0]['channel'])) {
+                return ucfirst($result[0]['channel']);
+            }
+            
+            return 'N/A';
+        } catch (\Exception $e) {
+            return 'N/A';
+        }
+    }
+    
+    /**
+     * Get error rates for all channels
+     */
+    private function getChannelErrorRates($dateFrom, $dateTo)
+    {
+        try {
+            $sql = "SELECT channel, 
+                    COUNT(*) as total_requests,
+                    SUM(CASE WHEN miss_count > 0 THEN 1 ELSE 0 END) as error_requests,
+                    ROUND((SUM(CASE WHEN miss_count > 0 THEN 1 ELSE 0 END) / COUNT(*)) * 100, 2) as error_rate,
+                    ROUND((1 - (SUM(CASE WHEN miss_count > 0 THEN 1 ELSE 0 END) / COUNT(*))) * 100, 2) as success_rate
+                    FROM api_statistics 
+                    WHERE DATE(created_at) BETWEEN ? AND ?
+                    AND channel IS NOT NULL
+                    AND channel != ''
+                    GROUP BY channel
+                    HAVING total_requests >= 5
+                    ORDER BY error_rate DESC";
+            
+            $result = $this->statistics->pdo->query($sql, [$dateFrom, $dateTo]);
+            
+            $channelErrors = [];
+            foreach ($result as $row) {
+                $channelErrors[] = [
+                    'channel' => ucfirst($row['channel']),
+                    'total_requests' => (int)$row['total_requests'],
+                    'error_requests' => (int)$row['error_requests'],
+                    'error_rate' => (float)$row['error_rate'],
+                    'success_rate' => (float)$row['success_rate'],
+                    'status' => $row['error_rate'] > 20 ? 'critical' : ($row['error_rate'] > 10 ? 'warning' : 'healthy')
+                ];
+            }
+            
+            return $channelErrors;
+        } catch (\Exception $e) {
+            return [];
+        }
     }
 }

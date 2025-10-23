@@ -102,8 +102,8 @@
             <div class="body">
                 <i class="zmdi zmdi-hc-4x zmdi-star"></i>
                 <h3 class="m-t-10 mb-0" id="topChannel">--</h3>
-                <h6 class="m-t-10">TOP CHANNEL</h6>
-                <small style="opacity: 0.9;">Most requested platform</small>
+                <h6 class="m-t-10">MOST STABLE CHANNEL</h6>
+                <small style="opacity: 0.9;">Least errors & most reliable</small>
             </div>
         </div>
     </div>

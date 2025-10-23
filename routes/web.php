@@ -30,6 +30,7 @@ $router->group(['middleware' => ['AuthMiddleware']], function($router) {
     
     // Cache Statistics
     $router->get('/admin/cache/statistics', 'Admin\CacheController@statistics');
+    $router->post('/admin/cache/clear', 'Admin\CacheController@clear');
     
     // Settings
     $router->get('/admin/settings', 'Admin\Settings\SettingsController@index');

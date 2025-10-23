@@ -7,8 +7,13 @@
 @section('content')
 <div class="block-header">
     <div class="row clearfix">
-        <div class="col-lg-5 col-md-5 col-sm-12">
+        <div class="col-lg-6 col-md-6 col-sm-12">
             <h2 class="float-left">System Settings</h2>
+        </div>
+        <div class="col-lg-6 col-md-6 col-sm-12 text-right">
+            <button type="button" class="btn btn-warning" onclick="clearCache()">
+                <i class="zmdi zmdi-delete"></i> Clear Cache
+            </button>
         </div>
     </div>
 </div>
@@ -150,6 +155,31 @@ function handleSettingsUpdate(event) {
     });
     
     return false;
+}
+
+function clearCache() {
+    if (!confirm('Are you sure you want to clear all cache?')) {
+        return;
+    }
+    
+    $.ajax({
+        url: '<?php echo url("/admin/cache/clear"); ?>',
+        method: 'POST',
+        data: {
+            _token: $('meta[name="csrf-token"]').attr('content')
+        },
+        success: function(response) {
+            if (response.success) {
+                toastr.success(response.message || 'Cache cleared successfully!');
+            } else {
+                toastr.error(response.message || 'Failed to clear cache');
+            }
+        },
+        error: function(xhr) {
+            const response = xhr.responseJSON;
+            toastr.error(response && response.message ? response.message : 'An error occurred.');
+        }
+    });
 }
 </script>
 @endsection

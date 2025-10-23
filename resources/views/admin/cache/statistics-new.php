@@ -171,6 +171,34 @@
         </div>
     </div>
 </div>
+
+<!-- Channel Error Rates -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="stat-card">
+            <h5><i class="zmdi zmdi-alert-circle"></i> Channel Error Rates & Reliability</h5>
+            <div class="table-responsive">
+                <table class="table table-sm" id="channelErrorTable">
+                    <thead>
+                        <tr>
+                            <th>Channel</th>
+                            <th>Total Requests</th>
+                            <th>Errors</th>
+                            <th>Error Rate</th>
+                            <th>Success Rate</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
@@ -190,6 +218,7 @@ function loadStatistics() {
                 updateHitTypeChart(response.data.hit_breakdown);
                 updateTrendChart(response.data.trend);
                 updateChannelChart(response.data.channels);
+                updateChannelErrorTable(response.data.channel_errors);
             }
         },
         error: function() {
@@ -341,6 +370,40 @@ function updateChannelChart(data) {
         `;
     });
     $('#channelTable tbody').html(tableHtml);
+}
+
+// Update Channel Error Table
+function updateChannelErrorTable(data) {
+    if (!data || data.length === 0) {
+        $('#channelErrorTable tbody').html('<tr><td colspan="6" class="text-center text-muted">No error data available</td></tr>');
+        return;
+    }
+    
+    let tableHtml = '';
+    data.forEach(function(channel) {
+        const statusBadge = getStatusBadge(channel.status, channel.error_rate);
+        tableHtml += `
+            <tr>
+                <td><strong>${channel.channel}</strong></td>
+                <td>${channel.total_requests.toLocaleString()}</td>
+                <td><span class="badge badge-danger">${channel.error_requests}</span></td>
+                <td><strong>${channel.error_rate}%</strong></td>
+                <td><span class="badge badge-success">${channel.success_rate}%</span></td>
+                <td>${statusBadge}</td>
+            </tr>
+        `;
+    });
+    $('#channelErrorTable tbody').html(tableHtml);
+}
+
+function getStatusBadge(status, errorRate) {
+    if (status === 'critical') {
+        return `<span class="badge badge-danger"><i class="zmdi zmdi-alert-circle"></i> Critical (${errorRate}%)</span>`;
+    } else if (status === 'warning') {
+        return `<span class="badge badge-warning"><i class="zmdi zmdi-alert-triangle"></i> Warning (${errorRate}%)</span>`;
+    } else {
+        return `<span class="badge badge-success"><i class="zmdi zmdi-check"></i> Healthy (${errorRate}%)</span>`;
+    }
 }
 
 // Load on page load
