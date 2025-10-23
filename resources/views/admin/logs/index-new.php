@@ -125,6 +125,7 @@
             window.location.href = '<?php echo url('/admin/logs'); ?>?file=' + encodeURIComponent(selectedFile);
         }
     }
+    
     function refreshLog() {
         window.location.reload();
     }
