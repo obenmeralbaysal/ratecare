@@ -114,10 +114,9 @@
         </div>
     </div>
 @endsection
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 
-<script>
+ @section('scripts')
+   <script>
     function changeLogFile() {
         const select = document.getElementById('logFileSelect');
         const selectedFile = select.value;
@@ -126,8 +125,6 @@
             window.location.href = '<?php echo url('/admin/logs'); ?>?file=' + encodeURIComponent(selectedFile);
         }
     }
- @section('scripts')
-   
     function refreshLog() {
         window.location.reload();
     }
